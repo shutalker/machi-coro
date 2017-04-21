@@ -1,5 +1,5 @@
 from uuid import uuid4
-from card_base_class import Enterprise_card
+from card_enterprise_class import EnterpriseCard
 
 
 class Player:
@@ -98,7 +98,7 @@ class Player:
 
                 return -1
 
-            building_enterprise = Enterprise_card(enterprise, self.id)
+            building_enterprise = EnterpriseCard(enterprise, self.id)
             self.enterprise_card_hand[enterprise_name] = building_enterprise
 
         self.enterprise_card_hand[enterprise_name].hand_card_amount += 1
