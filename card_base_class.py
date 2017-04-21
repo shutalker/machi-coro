@@ -1,4 +1,4 @@
-class Card:
+class Enterprise_card:
 
     '''
        Класс карт предприятий (базовый). Каждое предприятие в течение игры
@@ -28,32 +28,32 @@ class Card:
            инстанса класса
         '''
 
-        #id необходимо, что бы иметь возможность узнать, является ли игрок
-        #активным или нет на данном ходу. Т.е. все карты, принадлежащие одному
-        #игроку, имеют тот же id, что и у игрока
+        # id необходимо, что бы иметь возможность узнать, является ли игрок
+        # активным или нет на данном ходу. Т.е. все карты, принадлежащие одному
+        # игроку, имеют тот же id, что и у игрока
         self.id = player_id
         self.name = card_properties['name']
         self.profit_type = card_properties['profit_type']
         self.branch_type = card_properties['branch_type']
-        self.profit_margin = card_properties['profit_matgin']
+        self.profit_margin = card_properties['profit_margin']
         self.description = card_properties['desc']
         self.price = card_properties['price']
 
-        #эффект карты срабатывает только в том случае, если игрок выбросит
-        #определенное количество очков (или количество очков в некотором
-        #диапазоне чисел). Задается через tuple из 2 элементов
+        # эффект карты срабатывает только в том случае, если игрок выбросит
+        # определенное количество очков (или количество очков в некотором
+        # диапазоне чисел). Задается через tuple из 2 элементов
         self.effect_cost = card_properties['effect_cost']
 
-        #количество карт данного типа в руке каждого игрока (влияет на
-        #суммарный доход от этого предприятия)
+        # количество карт данного типа в руке каждого игрока (влияет на
+        # суммарный доход от этого предприятия)
         self.hand_card_amount = 0
 
     def __bytes__(self):
 
         '''
             Перегрузка метода для вызова bytes(card_instance). Байтовая строка
-            будет передаваться по сети от сервера клиенту с целью предоставления
-            ему информации о картах 
+            будет передаваться по сети от сервера клиенту с целью
+            предоставления ему информации о картах
         '''
 
         separator = ':'
@@ -62,12 +62,13 @@ class Card:
         card_info += self.profit_type + separator
         card_info += self.branch_type + separator
         card_info += str(self.profit_margin) + separator
-        card_info += str(self.price)
+        card_info += str(self.price) + separator
+        card_info += str(self.effect_cost[0]) + '-' + str(self.effect_cost[1])
 
         return bytes(card_info, encoding='utf-8')
 
-    def card_effect(self, player_list, player_id):
-       
+    def card_effect(self, player_dict):
+
         '''
             Функция-диспетчер. В зависимости от параметра profit_type
             эта функция будет возвращать результат вызова конкретного
@@ -75,18 +76,14 @@ class Card:
         '''
 
         profit_margin = 0
-
-        profit_methods = {
-                            'from_bank_anytime': self._Card__card_effect_from_bank_anytime(player_list, player_id),
-                            'from_bank': self._Card__card_effect_from_bank(player_list, player_id),
-                            'from_active_player': self._Card__card_effect_from_active_player(player_list, player_id),
-                            'from_all_players': self._Card__card_effect_from_all_players(player_list, player_id)
-                         }
-        profit_margin = profit_methods[self.profit_type](player_list, player_id)
+        profit_method_name = '_Enterprise_card__card_effect_'
+        profit_method_name += self.profit_type
+        profit_method = getattr(self, profit_method_name)
+        profit_margin = profit_method(player_dict)
 
         return profit_margin
 
-    def __card_effect_from_bank_anytime(self, *args, **kwargs):
+    def __card_effect_from_bank_anytime(self, pass_arg):
 
         '''
             Получение дохода из банка в ход любого игрока
@@ -96,22 +93,18 @@ class Card:
 
         return profit_margin
 
-    def __card_effect_from_bank(self, player_list, player_id):
+    def __card_effect_from_bank(self, player_dict):
 
         '''
             Получение дохода из банка только в свой ход
         '''
 
-        for player in player_list:
-            if player.is_active and player.id == player_id:
-                profit_margin = self.profit_margin * self.hand_card_amount
-                break
+        if player_dict[self.id].is_active:
+            profit_margin = self.profit_margin * self.hand_card_amount
 
         return profit_margin
 
-
-    
-    def __card_effect_from_active_player(self, player_list, player_id):
+    def __card_effect_from_active_player(self, player_dict):
 
         '''
             Получение дохода из средтв активного игрока
@@ -119,18 +112,22 @@ class Card:
 
         profit_margin = 0
 
-        for player in player_list:
-            if player.id != player_id and player.is_active:
+        for player_id in player_dict:
+
+            # payer - плательщик, т.е. игрок, из чьих средств в данных момент
+            # поступает доход игроку, у которого сработал данный эффект карты
+            payer = player_dict[player_id]
+            if player_id != self.id and payer.is_active:
                 for _ in range(self.profit_margin * self.hand_card_amount):
-                    if player.bank > 0:
-                        player.bank -= 1
+                    if payer.bank > 0:
+                        payer.bank -= 1
                         profit_margin += 1
                     else:
                         break
 
         return profit_margin
 
-    def __card_effect_from_all_players(self, player_list, player_id):
+    def __card_effect_from_all_players(self, player_dict):
 
         '''
             Получение дохода из средств каждого игрока
@@ -138,11 +135,12 @@ class Card:
 
         profit_margin = 0
 
-        for player in player_list:
-            if player.id != player_id:
+        for player_id in player_dict:
+            if player_id != self.id:
+                payer = player_dict[player_id]
                 for _ in range(self.profit_margin * self.hand_card_amount):
-                    if player.bank > 0:
-                        player.bank -= 1
+                    if payer.bank > 0:
+                        payer.bank -= 1
                         profit_margin += 1
                     else:
                         break
