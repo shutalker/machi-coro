@@ -51,14 +51,14 @@ class EnterpriseCard(BaseCard):
         '''
 
         profit_margin = 0
-        profit_method_name = '_EnterpriseCard__card_effect_'
+        profit_method_name = 'card_effect_'
         profit_method_name += self.profit_type
         profit_method = getattr(self, profit_method_name)
         profit_margin = profit_method(player_dict)
 
         return profit_margin
 
-    def __card_effect_from_bank_anytime(self, pass_arg):
+    def card_effect_from_bank_anytime(self, pass_arg):
 
         '''
             Получение дохода из банка в ход любого игрока
@@ -68,18 +68,20 @@ class EnterpriseCard(BaseCard):
 
         return profit_margin
 
-    def __card_effect_from_bank(self, player_dict):
+    def card_effect_from_bank(self, player_dict):
 
         '''
             Получение дохода из банка только в свой ход
         '''
+
+        profit_margin = 0
 
         if player_dict[self.id].is_active:
             profit_margin = self.profit_margin * self.hand_card_amount
 
         return profit_margin
 
-    def __card_effect_from_active_player(self, player_dict):
+    def card_effect_from_active_player(self, player_dict):
 
         '''
             Получение дохода из средств активного игрока
@@ -102,13 +104,16 @@ class EnterpriseCard(BaseCard):
 
         return profit_margin
 
-    def __card_effect_from_all_players(self, player_dict):
+    def card_effect_from_all_players(self, player_dict):
 
         '''
             Получение дохода из средств каждого игрока
         '''
 
         profit_margin = 0
+
+        if not player_dict[self.id].is_active:
+            return profit_margin
 
         for player_id in player_dict:
             if player_id != self.id:

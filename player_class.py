@@ -51,6 +51,12 @@ class Player:
            осуществляется доступ к карте
         '''
 
+        if self.sight_card_hand[sight_name].is_built:
+
+            # если достопримечательность уже построена
+
+            return -1
+
         sight_price = self.sight_card_hand[sight_name].price
 
         if sight_price > self.bank:
@@ -91,13 +97,16 @@ class Player:
 
             return 0
 
-        if enterprise_name not in self.enterprise_card_hand:
-            card_in_heap_amount = card_heap[enterprise_name]
+        # проверяем, сколько карт из резерва осталось в колоде
+        card_in_heap_amount = card_heap[enterprise_name]
 
-            if card_in_heap_amount < 1:
+        if card_in_heap_amount < 1:
 
                 return -1
 
+        # если в руке игрока еще нет такой карты, то необходимо ее добавить
+        # иначе, просто увеличить счетчик карт этого типа в руке
+        if enterprise_name not in self.enterprise_card_hand:
             building_enterprise = EnterpriseCard(enterprise, self.id)
             self.enterprise_card_hand[enterprise_name] = building_enterprise
 

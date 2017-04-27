@@ -39,12 +39,12 @@ class SightCard(BaseCard):
            общаться с клиентом, опрашивая его, сколько кубиков тот желает бросать 
         '''
 
-        sight_effect_name = '_SightCard__card_effect_'
+        sight_effect_name = 'card_effect_'
         sight_effect_name += self.effect_name
         sight_effect = getattr(self, sight_effect_name)
         return sight_effect(*args, **kwargs)
 
-    def __card_effect_railway_station(*args, **kwargs):
+    def card_effect_railway_station(*args, **kwargs):
 
         '''
            Карта "Вокзал": позволяет игроку бросать 1 или 2 кубика.
@@ -58,7 +58,7 @@ class SightCard(BaseCard):
 
         return dice_amount
 
-    def __card_effect_seaport(*args, **kwargs):
+    def card_effect_seaport(*args, **kwargs):
 
         '''
             Карта "Порт": позволяет игроку увеличить на 2 количество очков,
@@ -74,7 +74,7 @@ class SightCard(BaseCard):
 
         return dice_score
 
-    def __card_effect_airport(*args, **kwargs):
+    def card_effect_airport(*args, **kwargs):
 
         '''
            Карта "Аэропорт": если игрок отказывается от строительства, то он
@@ -86,7 +86,7 @@ class SightCard(BaseCard):
         player = kwargs[self.id]
         player.bank += 10
 
-    def __card_effect_radio_station(*args, **kwargs):
+    def card_effect_radio_station(*args, **kwargs):
 
         '''
            Карта "Радиовышка": позволяет перебросить 1 кубик 1 раз в ход
