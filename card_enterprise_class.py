@@ -1,4 +1,5 @@
 from card_base_class import BaseCard
+import unittest
 
 
 class EnterpriseCard(BaseCard):
@@ -121,3 +122,19 @@ class EnterpriseCard(BaseCard):
                         break
 
         return profit_margin
+    
+    
+    
+    class TestEnterpriseCard(unittest.TestCase):
+        def setUp(self):
+            self.A=EnterpriseCard({'profit_type':1,'branch_type':2,'profit_margin':5,'name':"test",'desc':"test",'price':10,'effect_cost':1},123)
+            self.B=EnterpriseCard.hand_card_amount=5
+    def testCardEffectFromPlayer(self):
+            C=EnterpriseCard.card_effect_from_bank()
+            self.assertEqual(,C)
+    
+    
+    
+    
+    if __name__=='__main__':
+        unittest.main()
