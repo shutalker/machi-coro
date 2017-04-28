@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/shutalker/machi-coro.svg?branch=master)](https://travis-ci.org/shutalker/machi-coro)
 # Machi-coro
 ### Реализация популярной японской настолки
 ---
