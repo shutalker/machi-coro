@@ -1,4 +1,4 @@
-from uuid import uuid4     #уникальный uuid для каждого игрока
+from uuid import uuid4
 from card_enterprise_class import EnterpriseCard
 
 
