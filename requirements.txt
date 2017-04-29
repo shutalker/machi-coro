@@ -1,4 +1,13 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+<<<<<<< develop
+appdirs==1.4.3
+packaging==16.8
+pyparsing==2.2.0
+six==1.10.0
+=======
+>>>>>>> 0b1e08c504f7762bb9babfc1afcd2e4ae1051d26
 aiohttp==2.0.1
 appdirs==1.4.3
 async-timeout==1.2.0
@@ -56,9 +65,13 @@ wcwidth==0.1.7
 webencodings==0.5.1
 widgetsnbextension==2.0.0
 yarl==0.10.0
+<<<<<<< HEAD
 =======
 appdirs==1.4.3
 packaging==16.8
 pyparsing==2.2.0
 six==1.10.0
 >>>>>>> develop
+=======
+>>>>>>> master
+>>>>>>> 0b1e08c504f7762bb9babfc1afcd2e4ae1051d26
