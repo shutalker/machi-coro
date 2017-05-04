@@ -27,6 +27,54 @@ class Game:
         self.start_bank_size = start_bank_size
         self.end_game_flag = False
 
+        # внутреигровой буфер сообщений
+        self.message_buffer = ''
+
+    def sendRequest(self, player_id, request):
+        
+        '''
+            Функция-дистпетчер обработки запросов от сервера клиентам
+        '''
+
+        request_handler = {
+            'player_name_request' : self.player_name_request,
+            'close_connection_request' : self.close_connection_request,
+            'dice_amount_request' : self.dice_amount_request,
+            'reroll_dice_request' : self.reroll_dice_request,
+            'increase_dice_score_request' : self.increase_dice_score_request,
+            'profit_request' : self.profit_request,
+            'bank_loss_request' : self.bank_loss_request,
+            'build_request' : self.build_request,
+            'profit_from_no_build_request' : self.profit_from_no_build_request,
+            'build_enterprise_request' : self.build_enterprise_request,
+            'build_sight_request' : self.build_sight_request
+        }
+
+        parsed_request = request.split(sep=':', maxsplit=1)
+        command = parsed_request[0]
+
+        if len(parsed_request) > 1:
+            request_arg = parsed_request[1]
+        else:
+            request_arg = None
+
+        for peer in self.peers:
+            if self.peers[peer]['player_id'] == player_id:
+                player_protocol = self.peers[peer]['transport']
+
+        return request_handler[command](player_protocol, command, request_arg)
+
+    def broadcast(self, message):
+        
+        '''
+            Рассылка сообщения всем игрокам
+        '''
+
+        payload = ('bcast:' + message).encode(encoding='utf-8')
+
+        for player_peer in self.peers:
+            self.peers[player_peer]['transport'].sendMessage(payload, True)
+
     def add_player(self, player_protocol):
 
         '''
@@ -43,6 +91,8 @@ class Game:
         self.players[new_player.id] = new_player
         request = 'player_name_request'
         player_name = self.sendRequest(new_player.id, request)
+        if player_name != None:
+            new_player.name = player_name
 
     def pop_player(self, player_peer):
 
@@ -59,10 +109,18 @@ class Game:
         if is_binary:
             print("Binary message received: {0} bytes".format(len(payload)))
         else:
-            print("Text message received: {0}".format(payload.decode('utf8')))
+            print("Text message received: {0}".format(payload.decode('utf-8')))
 
-        # self.peers[player_peer]['transport'].sendMessage(payload, is_binary)
+        message = payload.decode('utf-8')
+        self.message_buffer = message
         self.message_recieved_flag = True
+
+    def close_all_connections(self):
+
+        for player_peer in self.peers:
+            request = 'close_connection_request'
+            self.sendRequest(self.peers[player_peer]['player_id'], request)
+            
 
     def init_players_hands(self):
 
@@ -126,9 +184,10 @@ class Game:
         sum_dice_score = dice_scores[0] + dice_scores[1]
 
         # если у игрока построена достопримечательность "Порт",
-        # то игра запрашивает у него увеличение выброшенных очков на 2
-        if active_player.sight_card_hand['Порт'].is_built:
-            request = 'increase_dice_score'
+        # то игра запрашивает у него увеличение выброшенных очков на 2,
+        # но только в том случае, если игрок выбросил 10 очков
+        if active_player.sight_card_hand['Порт'].is_built and sum_dice_score == 10:
+            request = 'increase_dice_score_request'
             increase_value = self.sendRequest(active_player.id, request)
             sum_dice_score += increase_value
 
@@ -191,7 +250,7 @@ class Game:
                     player.bank += 10
                     build_status = 'build_successful'
             else:
-                #возвращается 'build_enterprise' или 'build_sight'
+                # возвращается 'build_enterprise' или 'build_sight'
                 request = response + '_request'
                 build_status = self.sendRequest(player.id, request)
 
@@ -254,7 +313,7 @@ class Game:
 
             if active_player.built_sight_amount == sights_to_build:
                 request = 'ПОБЕДИТЕЛЬ - ' + active_player.name + '!'
-                self.pop_all_players()
+                self.close_all_connections()
                 break
 
 
@@ -262,3 +321,117 @@ class Game:
     def stop(self):
 
         self.end_game_flag = True
+
+    def wait_for_message(self):
+
+        while not self.message_recieved_flag:
+
+            pass
+
+        self.message_recieved_flag = False
+
+        response = self.message_buffer
+        self.message_buffer = ''
+
+        return response
+
+    def player_name_request(self, player_protocol, request, *args):
+
+        '''
+            Функция запроса имени игрока
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+        response = self.wait_for_message()
+
+        if len(response) < 1:
+            response = None
+
+        return response
+
+    def close_connection_request(self, player_protocol, request, *args):
+
+        '''
+            Функция разрыва связи с игроками
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+
+    def dice_amount_request(self, player_protocol, request, *args):
+
+        '''
+            Функция запроса количества кубиков для выбрасывания
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+        response = self.wait_for_message()
+
+        return int(response)
+
+    def reroll_dice_request(self, player_protocol, request, *args):
+
+        '''
+            Функция запроса перебрасывания кубика (одного из двух)
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+        response = self.wait_for_message()
+
+        dice_idx, result = None, None
+
+        if response == 'reroll_accept':
+            dice_amount = args[0]
+
+            if dice_amount > 1:
+                request = 'dice_idx_to_reroll_request'
+                player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+                response = self.wait_for_message()
+                dice_idx = int(response)
+            else:
+                dice_idx = 0
+
+            result = randint(1, 6)
+
+        return dice_idx, result
+
+    def increase_dice_score_request(self, player_protocol, request, *args):
+
+        '''
+            Функция запроса увеличения очков на кубиках
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+        response = self.wait_for_message()
+
+        increase_value = 0
+
+        if response == 'increase_accept':
+            increase_value = 2
+
+        return increase_value
+
+    def profit_request(self, player_protocol, request, *args):
+
+        '''
+            Функция отсылки дохода игрока на данном ходу
+        '''
+
+        profit_info = 'Ваш доход на этом ходу: '
+        profit_info += args[0]
+        profit_info += ' монет(а/ы)'
+
+        request = request + ':' + profit_info
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+
+    def bank_loss_request(self, player_protocol, request, *args):
+
+        '''
+            Функция отсылки расхода игрока на данном ходу
+        '''
+
+        loss_info = 'Ваши убытки на этом ходу: '
+        loss_info += args[0]
+        loss_info += ' монет(а/ы)'
+
+        request = request + ':' + loss_info
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
