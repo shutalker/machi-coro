@@ -49,6 +49,12 @@ class GameServerFactory(WebSocketServerFactory):
 
     def get_cards_from_db(self):
 
+        '''
+            Вытягивание информации об игровых картах. Выполняется единажды
+            при старте сервера, поэтому блокировками при вызовах execute
+            можно пренебресь (на первых версиях реализации)
+        '''
+
         try:
             db = MySQLdb.connect(host="localhost", db="machi_coro",
                                  read_default_file="./.my.cnf")
@@ -109,6 +115,7 @@ class GameServerFactory(WebSocketServerFactory):
             new_game = Game(self.card_heap, self.cards_properties)
             self.last_created_game_id = new_game.id
             self.games[self.last_created_game_id] = new_game
+            print('Game ' + str(new_game.id) + ' created')
 
         self.games[self.last_created_game_id].add_player(player)
         self.current_lobby_size += 1
@@ -124,31 +131,40 @@ class GameServerFactory(WebSocketServerFactory):
         for game_id in self.games:
             game = self.games[game_id]
 
-            if player.peer in game.peers:
+            if player.peer in game.request_handler.peers:
                 game.pop_player(player.peer)
 
+                # если игра еще не началась, то просто уменьшется размер
+                # текущего лобби игроков
                 if game.status == 'WAIT':
                     self.current_lobby_size -= 1
 
-                if len(game.players) < 1:
-                    # last_peer = game.peers.popitem()
-                    # last_peer[1]['transport'].connectionLost('reason')
-                    game.stop()
-                    self.game_threads[game.id].join()
-                    print("Game " + str(game.id) + " has been finished")
-                    self.game_threads.pop(game.id)
-                    self.games.pop(game.id)
+                    break
 
-                break
+                # если в игре остался только 1 игрок, то игра завершается
+                if game.status == 'PLAYING':
+                    if len(game.players) < 2:
+                        last_player_id = game.players.popitem()[0]
+                        request = 'close_connection_request'
+                        game.request_handler.send_request(last_player_id,
+                                                          request)
+                        game.stop()
+                        self.game_threads[game.id].join()
+                        self.game_threads.pop(game.id)
+
+                        print("Game " + str(game.id) + " has been finished")
+                        self.games.pop(game.id)
+
+                    break
 
     def process_message(self, player, payload, isBinary):
 
         for game_id in self.games:
             game = self.games[game_id]
             print('Trying game ' + str(game_id))
-            if player.peer in game.peers:
+            if player.peer in game.request_handler.peers:
                 print('Message for ' + str(game.id))
-                game.recv_msg(player.peer, payload, isBinary)
+                game.request_handler.recv_msg(player.peer, payload, isBinary)
                 break
 
 
@@ -161,7 +177,7 @@ if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
-    factory = GameServerFactory(u"ws://127.0.0.1:9000")
+    factory = GameServerFactory(u"ws://0.0.0.0:9000")
     factory.protocol = GameServerProtocol
 
     reactor.listenTCP(9000, factory)

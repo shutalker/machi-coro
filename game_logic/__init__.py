@@ -1,1 +1,1 @@
-__all__ = ['player', 'game']
+__all__ = ['player', 'game', 'server_request_handler']

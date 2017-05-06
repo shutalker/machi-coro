@@ -1,6 +1,7 @@
 from uuid import uuid4
 from random import randint
 from game_logic.player import Player
+from game_logic.server_request_handler import ServerRequestHandler
 from card.enterprise_card import EnterpriseCard
 from card.sight_card import SightCard
 
@@ -12,68 +13,16 @@ class Game:
         self.id = uuid4()
         self.status = 'WAIT'
 
-        # ключ в словаре - player.peer (host id), значение - словарь:
-        # ключи: transport, player_id
-        self.peers = dict()
-
         # ключ в словаре - id игрока, значение - объект Player
         self.players = dict()
-
-        # флаг ожидания сообщения
-        self.message_recieved_flag = False
 
         self.card_heap = card_heap
         self.card_properties = card_props
         self.start_bank_size = start_bank_size
         self.end_game_flag = False
 
-        # внутреигровой буфер сообщений
-        self.message_buffer = ''
-
-    def sendRequest(self, player_id, request):
-        
-        '''
-            Функция-дистпетчер обработки запросов от сервера клиентам
-        '''
-
-        request_handler = {
-            'player_name_request' : self.player_name_request,
-            'close_connection_request' : self.close_connection_request,
-            'dice_amount_request' : self.dice_amount_request,
-            'reroll_dice_request' : self.reroll_dice_request,
-            'increase_dice_score_request' : self.increase_dice_score_request,
-            'profit_request' : self.profit_request,
-            'bank_loss_request' : self.bank_loss_request,
-            'build_request' : self.build_request,
-            'profit_from_no_build_request' : self.profit_from_no_build_request,
-            'build_enterprise_request' : self.build_enterprise_request,
-            'build_sight_request' : self.build_sight_request
-        }
-
-        parsed_request = request.split(sep=':', maxsplit=1)
-        command = parsed_request[0]
-
-        if len(parsed_request) > 1:
-            request_arg = parsed_request[1]
-        else:
-            request_arg = None
-
-        for peer in self.peers:
-            if self.peers[peer]['player_id'] == player_id:
-                player_protocol = self.peers[peer]['transport']
-
-        return request_handler[command](player_protocol, command, request_arg)
-
-    def broadcast(self, message):
-        
-        '''
-            Рассылка сообщения всем игрокам
-        '''
-
-        payload = ('bcast:' + message).encode(encoding='utf-8')
-
-        for player_peer in self.peers:
-            self.peers[player_peer]['transport'].sendMessage(payload, True)
+        # инстанс обработчика запросов клиентам от сервера
+        self.request_handler = ServerRequestHandler()
 
     def add_player(self, player_protocol):
 
@@ -84,15 +33,16 @@ class Game:
         '''
 
         new_player = Player(self.start_bank_size)
-        self.peers[player_protocol.peer] = {
+        self.request_handler.peers[player_protocol.peer] = {
             'transport' : player_protocol,
             'player_id' : new_player.id
         }
         self.players[new_player.id] = new_player
-        request = 'player_name_request'
-        player_name = self.sendRequest(new_player.id, request)
-        if player_name != None:
-            new_player.name = player_name
+        # request = 'player_name_request'
+        # player_name = self.request_handler.send_request(new_player.id,
+        #                                                 request)
+        # if player_name != None:
+        #    new_player.name = player_name
 
     def pop_player(self, player_peer):
 
@@ -100,27 +50,12 @@ class Game:
             При потере соединения игрока с сервером первый исключается
             из инстанса класса Game, т.е. больше не участвует в игре
         '''
-        player_id = self.peers[player_peer]['player_id']
+        player_id = self.request_handler.peers[player_peer]['player_id']
+        player_name = self.players[player_id].name
         self.players.pop(player_id)
-        self.peers.pop(player_peer)
-
-    def recv_msg(self, player_peer, payload, is_binary):
-
-        if is_binary:
-            print("Binary message received: {0} bytes".format(len(payload)))
-        else:
-            print("Text message received: {0}".format(payload.decode('utf-8')))
-
-        message = payload.decode('utf-8')
-        self.message_buffer = message
-        self.message_recieved_flag = True
-
-    def close_all_connections(self):
-
-        for player_peer in self.peers:
-            request = 'close_connection_request'
-            self.sendRequest(self.peers[player_peer]['player_id'], request)
-            
+        self.request_handler.peers.pop(player_peer)
+        request = 'Игрок ' + player_name + ' покинул игру'
+        self.request_handler.broadcast(request)
 
     def init_players_hands(self):
 
@@ -164,7 +99,8 @@ class Game:
         # то у игра запрашивает количество кубиков для выбрасывания
         if active_player.sight_card_hand['Вокзал'].is_built:
             request = 'dice_amount_request'
-            dice_amount = self.sendRequest(active_player.id, request)
+            dice_amount = self.request_handler.send_request(active_player.id,
+                                                            request)
         else:
             dice_amount = 1
 
@@ -177,7 +113,8 @@ class Game:
         # то игра запрашивает у него перебрасывание одного кубика
         if active_player.sight_card_hand['Радио'].is_built:
             request = 'reroll_dice_request:' + str(dice_amount)
-            dice_idx, result = self.sendRequest(active_player.id, request)
+            dice_idx, result = self.request_handler.send_request(active_player.id,
+                                                                 request)
             if dice_idx != None:
                 dice_scores[dice_idx] = result
 
@@ -188,10 +125,49 @@ class Game:
         # но только в том случае, если игрок выбросил 10 очков
         if active_player.sight_card_hand['Порт'].is_built and sum_dice_score == 10:
             request = 'increase_dice_score_request'
-            increase_value = self.sendRequest(active_player.id, request)
+            increase_value = self.request_handler.send_request(active_player.id,
+                                                               request)
             sum_dice_score += increase_value
 
         return sum_dice_score
+
+    def get_avaliable_enterprises(self, player):
+
+        '''
+            Получение списка доступных для постройки игроком предприятий
+        '''
+
+        player_bank = player.bank
+        avaliable_enterprises = []
+
+        for enterprise_name in self.card_heap:
+            enterprise_amount = self.card_heap[enterprise_name]
+
+            if enterprise_amount > 0:
+                enterprise_price = self.card_properties[enterprise_name].price
+
+                if player_bank >= enterprise_price:
+                    avaliable_enterprises.append(enterprise_name)
+
+        return avaliable_enterprises
+
+    def get_avaliable_sights(self, player):
+
+        '''
+            Получение списка доступных для постройки игроком
+            достопримечательностей
+        '''
+
+        player_bank = player.bank
+        avaliable_sights = []
+
+        for sight_name in player.sight_card_hand:
+            sight = player.sight_card_hand[sight_name]
+
+            if not sight.is_built and player_bank >= sight.price:
+                avaliable_sights.append(sight.name)
+
+        return avaliable_sights
 
     def profit_phase(self, player_list, active_player_idx, dice_score):
 
@@ -217,7 +193,7 @@ class Game:
             bank_after_profit[next_player_idx] = player.bank
 
             request = 'profit_request:' + str(profit)
-            self.sendRequest(player.id, request)
+            self.request_handler.send_request(player.id, request)
             next_player_idx += 1
             if next_player_idx > (player_list_len - 1):
                 next_player_idx = 0
@@ -225,7 +201,7 @@ class Game:
         for idx, player in enumerate(player_list):
             bank_loss = bank_after_profit[idx] - player.bank
             request = 'bank_loss_request:' + str(bank_loss)
-            self.sendRequest(player.id, request)
+            self.request_handler.send_request(player.id, request)
 
     def building_phase(self, player):
 
@@ -241,18 +217,50 @@ class Game:
 
         while build_status != 'build_successful':
             request = 'build_request'
-            response = self.sendRequest(player.id, request)
+            response = self.request_handler.send_request(player.id, request)
 
-            if response == 'no_build':
+            if response == 'build_denied':
                 if player.sight_card_hand['Аэропорт'].is_built:
                     request = 'profit_from_no_build_request'
-                    self.sendRequest(player.id, request)
+                    self.request_handler.send_request(player.id, request)
                     player.bank += 10
                     build_status = 'build_successful'
             else:
                 # возвращается 'build_enterprise' или 'build_sight'
-                request = response + '_request'
-                build_status = self.sendRequest(player.id, request)
+                request = 'build_choise_request:'
+
+                # функции возвращают списки доступных для постройки предприятий
+                # в виде строк с их названиями
+                # игрок на клиентской стороне должен будет выбрать одно из них
+                # для постройки или вернуться назад к выбору типа постройки
+                if response == 'build_enterprise':
+                    avaliable_buildings = self.get_avaliable_enterprises(player)
+                elif response == 'build_sight':
+                    avaliable_buildings = self.get_avaliable_sights(player)
+
+                # запрос типа 'text+text+...+text+' будет парситься на стороне
+                # клиента, причем последний символ '+' в строке нужен не просто
+                # так: при вызове функции split в список последним элементом
+                # запишется строка 'back_to_type_choise'. Она будет означать
+                # выбор игрока: вернуться к выбору типа постройки
+                for building in avaliable_buildings:
+                    request += building + '+'
+
+                request += 'back_to_type_choise'
+
+                # сюда вернется либо название карты, либо back_to_type_choise
+                build_status = self.request_handler.send_request(player.id,
+                                                                 request)
+
+                if build_status != 'back_to_type_choise':
+                    if response == 'build_enterprise':
+                        enterprise = self.card_properties[build_status]
+                        player.build_enterprise(enterprise, self.card_heap)
+                    elif response == 'build_sight':
+                        sight = build_status
+                        player.build_sight(sight)
+
+                    build_sight = 'build_successful'
 
     def start(self):
 
@@ -266,10 +274,10 @@ class Game:
         print('Game ' + str(self.id) + ' has started')
 
         request = 'Игра началась! Приятной игры!'
-        self.broadcast(request)
+        self.request_handler.broadcast(request)
 
         while not self.end_game_flag:
-
+            '''
             # это делается на каждом ходу, поскольку игроки в процессе игры
             # могут отключаться от серверва, что приводит к корректировке
             # словарей и очередности хода
@@ -290,16 +298,15 @@ class Game:
             active_player.is_active = True
 
             # разослать всем игрокам, какой игрок является активным
-            # self.broadcast(message)
             request = 'Активный игрок: ' + str(active_player.name)
-            self.broadcast(request)
+            self.request_handler.broadcast(request)
 
             dice_score = self.roll_dice(active_player)
 
             # отправка результата броска кубика всем игрокам
             request = 'Игрок ' + str(active_player.name) + ' выбрасывает ' +
                   str(sum_dice_score) + ' очков!'
-            self.broadcast(request)
+            self.request_handler.broadcast(request)
 
             # фаза доходов
             self.profit_phase(turn_queue, current_active_player_idx,
@@ -313,125 +320,10 @@ class Game:
 
             if active_player.built_sight_amount == sights_to_build:
                 request = 'ПОБЕДИТЕЛЬ - ' + active_player.name + '!'
-                self.close_all_connections()
+                self.request_handler.close_all_connections()
                 break
-
-
+            '''
 
     def stop(self):
 
         self.end_game_flag = True
-
-    def wait_for_message(self):
-
-        while not self.message_recieved_flag:
-
-            pass
-
-        self.message_recieved_flag = False
-
-        response = self.message_buffer
-        self.message_buffer = ''
-
-        return response
-
-    def player_name_request(self, player_protocol, request, *args):
-
-        '''
-            Функция запроса имени игрока
-        '''
-
-        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-        response = self.wait_for_message()
-
-        if len(response) < 1:
-            response = None
-
-        return response
-
-    def close_connection_request(self, player_protocol, request, *args):
-
-        '''
-            Функция разрыва связи с игроками
-        '''
-
-        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-
-    def dice_amount_request(self, player_protocol, request, *args):
-
-        '''
-            Функция запроса количества кубиков для выбрасывания
-        '''
-
-        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-        response = self.wait_for_message()
-
-        return int(response)
-
-    def reroll_dice_request(self, player_protocol, request, *args):
-
-        '''
-            Функция запроса перебрасывания кубика (одного из двух)
-        '''
-
-        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-        response = self.wait_for_message()
-
-        dice_idx, result = None, None
-
-        if response == 'reroll_accept':
-            dice_amount = args[0]
-
-            if dice_amount > 1:
-                request = 'dice_idx_to_reroll_request'
-                player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-                response = self.wait_for_message()
-                dice_idx = int(response)
-            else:
-                dice_idx = 0
-
-            result = randint(1, 6)
-
-        return dice_idx, result
-
-    def increase_dice_score_request(self, player_protocol, request, *args):
-
-        '''
-            Функция запроса увеличения очков на кубиках
-        '''
-
-        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-        response = self.wait_for_message()
-
-        increase_value = 0
-
-        if response == 'increase_accept':
-            increase_value = 2
-
-        return increase_value
-
-    def profit_request(self, player_protocol, request, *args):
-
-        '''
-            Функция отсылки дохода игрока на данном ходу
-        '''
-
-        profit_info = 'Ваш доход на этом ходу: '
-        profit_info += args[0]
-        profit_info += ' монет(а/ы)'
-
-        request = request + ':' + profit_info
-        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-
-    def bank_loss_request(self, player_protocol, request, *args):
-
-        '''
-            Функция отсылки расхода игрока на данном ходу
-        '''
-
-        loss_info = 'Ваши убытки на этом ходу: '
-        loss_info += args[0]
-        loss_info += ' монет(а/ы)'
-
-        request = request + ':' + loss_info
-        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)

@@ -6,10 +6,10 @@ class MyClientProtocol(WebSocketClientProtocol):
     def clientInput(self):
         msg = str(input(">>> "))
 
-        if(len(msg) == 0):
+        if msg == 'quit':
             self.sendClose()
 
-        self.sendMessage(msg.encode('utf-8'))
+        # self.sendMessage(msg.encode('utf-8'))
 
     def onConnect(self, response):
         print('Connected to server {0}'.format(response.peer))
@@ -23,12 +23,14 @@ class MyClientProtocol(WebSocketClientProtocol):
         reactor.stop()
 
     def onMessage(self, payload, isBinary):
-        if isBinary:
-            print("Binary message received: {0} bytes".format(len(payload)))
-        else:
-            print("Text message received: {0}".format(payload.decode('utf8')))
 
-        self.clientInput()
+        message = payload.decode('utf-8')
+        print("Message received: {0}".format(message))
+
+        if message == 'close_connection_request':
+            self.sendClose()
+        else:
+            self.clientInput()
 
 
 if __name__ == '__main__':
