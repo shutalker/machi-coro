@@ -118,7 +118,8 @@ class Game:
             if dice_idx != None:
                 dice_scores[dice_idx] = result
 
-        sum_dice_score = dice_scores[0] + dice_scores[1]
+        for score in dice_scores:
+            sum_dice_score = score
 
         # если у игрока построена достопримечательность "Порт",
         # то игра запрашивает у него увеличение выброшенных очков на 2,
@@ -277,7 +278,6 @@ class Game:
         self.request_handler.broadcast(request)
 
         while not self.end_game_flag:
-            '''
             # это делается на каждом ходу, поскольку игроки в процессе игры
             # могут отключаться от серверва, что приводит к корректировке
             # словарей и очередности хода
@@ -304,8 +304,8 @@ class Game:
             dice_score = self.roll_dice(active_player)
 
             # отправка результата броска кубика всем игрокам
-            request = 'Игрок ' + str(active_player.name) + ' выбрасывает ' +
-                  str(sum_dice_score) + ' очков!'
+            request = 'Игрок ' + str(active_player.name) + ' выбрасывает ' + \
+                  str(dice_score) + ' очков!'
             self.request_handler.broadcast(request)
 
             # фаза доходов
@@ -322,7 +322,7 @@ class Game:
                 request = 'ПОБЕДИТЕЛЬ - ' + active_player.name + '!'
                 self.request_handler.close_all_connections()
                 break
-            '''
+
 
     def stop(self):
 

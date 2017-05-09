@@ -31,7 +31,11 @@ class BaseCard:
         # эффект карты срабатывает только в том случае, если игрок выбросит
         # определенное количество очков (или количество очков в некотором
         # диапазоне чисел). Задается через tuple из 2 элементов
-        self.effect_cost = card_properties['effect_cost']
+        effect_cost = card_properties['effect_cost'].split(sep='-')
+        for idx, elem in enumerate(effect_cost):
+            effect_cost[idx] = int(elem)
+
+        self.effect_cost = tuple(effect_cost)
 
     def __bytes__(self):
 

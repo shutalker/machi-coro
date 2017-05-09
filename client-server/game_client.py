@@ -1,45 +1,94 @@
-from autobahn.twisted.websocket import WebSocketClientProtocol
+from autobahn.twisted.websocket import WebSocketClientProtocol, \
+    WebSocketClientFactory
+from twisted.internet import stdio
+from game_logic.client_IO_handler import GameClientIO
 
 
-class MyClientProtocol(WebSocketClientProtocol):
-
-    def clientInput(self):
-        msg = str(input(">>> "))
-
-        if msg == 'quit':
-            self.sendClose()
-
-        # self.sendMessage(msg.encode('utf-8'))
+class GameClientProtocol(WebSocketClientProtocol):
 
     def onConnect(self, response):
-        print('Connected to server {0}'.format(response.peer))
+
+        print('Соединение с сервером {0} установлено.'.format(response.peer))
 
     def onOpen(self):
-        print('Connection successfully opened')
-        #self.clientInput()
+
+        self.factory.connection_open(self)
 
     def onClose(self, wasClean, code, reason):
-        print("WebSocket connection closed: {0}".format(reason))
-        reactor.stop()
+
+        self.factory.connection_close(self)
 
     def onMessage(self, payload, isBinary):
 
-        message = payload.decode('utf-8')
-        print("Message received: {0}".format(message))
+        self.factory.parse_message(self, payload, isBinary)
 
-        if message == 'close_connection_request':
-            self.sendClose()
-        else:
-            self.clientInput()
+
+class GameClientFactory(WebSocketClientFactory):
+
+    def __init__(self, *args, **kwargs):
+
+        super(GameClientFactory, self).__init__(*args, **kwargs)
+
+        self.connection_lose_flag = False
+        self.clientIO = GameClientIO()
+
+    def process_input(self, message):
+
+        print(message)
+
+    def connection_open(self, protocol):
+
+        print('Соединение открыто.')
+        print('Ожидание подключения остальных игроков...')
+        print('-------------------------------------------------------------')
+        print('\tДобро пожаловать в игру "Мачи-коро"!')
+        print('\tСписок доступных команд:')
+        print('\t\t"help [command]" - справка по доступным командам')
+        print('\t\t"rules" - правила игры')
+        print('\t\t"card [name]" - список всех карт/информация о карте')
+        print('\t\t"hand" - список карт на руках')
+        print('\t\t"quit" - выход из игры')
+        print('-------------------------------------------------------------')
+
+        self.clientIO.gameProtocol = protocol
+        stdio.StandardIO(self.clientIO)
+
+    def connection_close(self, protocol):
+
+        print('Отключение от игры...')
+        self.connection_lose_flag = True
+        reactor.stop()
+
+    def parse_message(self, protocol, payload, is_binary):
+
+        '''
+            Парсинг сообщений от сервера
+        '''
+
+        message = payload.decode('utf-8')
+        parsed_message = message.split(sep=':', maxsplit=1)
+        message_type = parsed_message[0]
+
+        if message_type == 'bcast':
+            self.clientIO.print_message(parsed_message[1])
+
+            return
+
+        if message_type == 'close_connection_request':
+            self.clientIO.stopProducing()
+            protocol.sendClose()
+
+            return
+
+        self.clientIO.process_server_request(*parsed_message)
 
 
 if __name__ == '__main__':
-    
+
     from twisted.internet import reactor
 
-    from autobahn.twisted.websocket import WebSocketClientFactory
-    factory = WebSocketClientFactory(u"ws://127.0.0.1:9000")
-    factory.protocol = MyClientProtocol
+    factory = GameClientFactory(u"ws://127.0.0.1:9000")
+    factory.protocol = GameClientProtocol
 
     reactor.connectTCP("127.0.0.1", 9000, factory)
     reactor.run()

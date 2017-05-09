@@ -138,6 +138,8 @@ class GameServerFactory(WebSocketServerFactory):
                 # текущего лобби игроков
                 if game.status == 'WAIT':
                     self.current_lobby_size -= 1
+                    if self.current_lobby_size < 1:
+                        self.games.pop(game.id)
 
                     break
 

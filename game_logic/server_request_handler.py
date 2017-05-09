@@ -23,8 +23,6 @@ class ServerRequestHandler:
             Осуществляет прием сообщения
         '''
 
-        print("Message received: {0}".format(payload.decode('utf-8')))
-
         message = payload.decode('utf-8')
         self.message_buffer = message
         self.message_recieved_flag = True
@@ -128,7 +126,7 @@ class ServerRequestHandler:
 
         dice_idx, result = None, None
 
-        if response == 'reroll_accept':
+        if response == 'accept':
             dice_amount = request_arg
 
             if dice_amount > 1:
@@ -136,7 +134,7 @@ class ServerRequestHandler:
                 player_protocol.sendMessage(request.encode(encoding='utf-8'),
                                             True)
                 response = self.wait_for_message()
-                dice_idx = int(response)
+                dice_idx = int(response) - 1
             else:
                 dice_idx = 0
 
@@ -156,7 +154,7 @@ class ServerRequestHandler:
 
         increase_value = 0
 
-        if response == 'increase_accept':
+        if response == 'accept':
             increase_value = 2
 
         return increase_value
@@ -193,6 +191,7 @@ class ServerRequestHandler:
             Функция запроса строительства предприятий (строить или нет?)
         '''
 
+        request = request + ':Предприятие+Достопримечательность+build_denied'
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
 
@@ -227,7 +226,7 @@ class ServerRequestHandler:
             return request_arg
 
         request = request + ':' + request_arg
-        response = player_protocol.sendMessage(request.encode(encoding='utf-8'),
-                                               True)
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+        response = self.wait_for_message()
 
         return response
