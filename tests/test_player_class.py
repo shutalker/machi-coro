@@ -25,7 +25,7 @@ class BuildEnterpriseTestCase(unittest.TestCase):
             'name': card_name,
             'price': 2,
             'description': u'Вы можете бросить 1 или 2 кубика.',
-            'effect_cost': (0, 0),
+            'effect_cost': '0-0',
             'effect_name': 'railway_station'
         }
 
@@ -71,7 +71,7 @@ class BuildEnterpriseTestCase(unittest.TestCase):
             'branch_type': 'food',
             'price': 1,
             'description': u'Возьмите 1 монету из банка. В ход любого игрока.',
-            'effect_cost': (1, 1)
+            'effect_cost': '1-1'
         }
 
         for _ in range(card_in_heap_amount + 2):

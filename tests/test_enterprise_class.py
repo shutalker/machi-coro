@@ -36,7 +36,7 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'branch_type': 'food',
             'price': 1,
             'description': u'Возьмите 1 монету из банка. В ход любого игрока.',
-            'effect_cost': (1, 1)
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)
@@ -76,7 +76,7 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'branch_type': 'fruit',
             'price': 1,
             'description': u'Возьмите 2 монеты из банка. В свой ход.',
-            'effect_cost': (1, 1)
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)
@@ -128,7 +128,7 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'branch_type': 'cafe',
             'price': 1,
             'description': u'Возьмите 3 монеты у активного игрока',
-            'effect_cost': (1, 1)
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)
@@ -199,7 +199,7 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'branch_type': 'special',
             'price': 1,
             'description': u'Возьмите 2 монеты у остальных игроков. В свой ход.',
-            'effect_cost': (1, 1)
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)
