@@ -1,7 +1,7 @@
 import unittest
 from random import randint
-import player_class
-import card_enterprise_class
+from game_logic.player import Player
+from card.enterprise_card import EnterpriseCard
 
 
 class ProfitMethodsTestCase(unittest.TestCase):
@@ -22,7 +22,7 @@ class ProfitMethodsTestCase(unittest.TestCase):
 
         # словарь игроков
         player_dict = dict()
-        player = player_class.Player(start_bank_size)
+        player = Player(start_bank_size)
         player_dict[player.id] = player
 
         # колода карт резерва
@@ -35,8 +35,8 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'profit_margin': 1,
             'branch_type': 'food',
             'price': 1,
-            'desc': u'Возьмите 1 монету из банка. В ход любого игрока.',
-            'effect_cost': (1, 1)
+            'description': u'Возьмите 1 монету из банка. В ход любого игрока.',
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)
@@ -62,7 +62,7 @@ class ProfitMethodsTestCase(unittest.TestCase):
 
         # словарь игроков
         player_dict = dict()
-        player = player_class.Player(start_bank_size)
+        player = Player(start_bank_size)
         player_dict[player.id] = player
 
         # колода карт резерва
@@ -75,8 +75,8 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'profit_margin': 2,
             'branch_type': 'fruit',
             'price': 1,
-            'desc': u'Возьмите 2 монеты из банка. В свой ход.',
-            'effect_cost': (1, 1)
+            'description': u'Возьмите 2 монеты из банка. В свой ход.',
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)
@@ -111,9 +111,9 @@ class ProfitMethodsTestCase(unittest.TestCase):
         player_dict = dict()
 
         # игрок, который должен получить доход от активного игрока
-        profit_reciever = player_class.Player(start_bank_size)
+        profit_reciever = Player(start_bank_size)
         # игрок, из чьих средств начисляется доход
-        active_player = player_class.Player(start_bank_size)
+        active_player = Player(start_bank_size)
         player_dict[profit_reciever.id] = profit_reciever
         player_dict[active_player.id] = active_player
 
@@ -127,8 +127,8 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'profit_margin': 3,
             'branch_type': 'cafe',
             'price': 1,
-            'desc': u'Возьмите 3 монеты у активного игрока',
-            'effect_cost': (1, 1)
+            'description': u'Возьмите 3 монеты у активного игрока',
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)
@@ -180,12 +180,12 @@ class ProfitMethodsTestCase(unittest.TestCase):
         player_dict = dict()
 
         # игрок, который должен получить доход от активного игрока
-        profit_reciever = player_class.Player(start_bank_size)
+        profit_reciever = Player(start_bank_size)
         player_dict[profit_reciever.id] = profit_reciever
 
         # игроки, из чьих средств начисляется доход
         for _ in range(player_amount):
-            player = player_class.Player(start_bank_size)
+            player = Player(start_bank_size)
             player_dict[player.id] = player
 
         # колода карт резерва
@@ -198,8 +198,8 @@ class ProfitMethodsTestCase(unittest.TestCase):
             'profit_margin': 2,
             'branch_type': 'special',
             'price': 1,
-            'desc': u'Возьмите 2 монеты у остальных игроков. В свой ход.',
-            'effect_cost': (1, 1)
+            'description': u'Возьмите 2 монеты у остальных игроков. В свой ход.',
+            'effect_cost': '1-1'
         }
 
         rand_card_amount = randint(1, 30)

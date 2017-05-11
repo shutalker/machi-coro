@@ -1,4 +1,4 @@
-from card_base_class import BaseCard
+from card.base_card import BaseCard
 
 class EnterpriseCard(BaseCard):
 

@@ -1,6 +1,6 @@
 import unittest
-import player_class
-import card_sight_class
+from game_logic.player import Player
+from card.sight_card import SightCard
 
 
 class BuildEnterpriseTestCase(unittest.TestCase):
@@ -18,19 +18,19 @@ class BuildEnterpriseTestCase(unittest.TestCase):
         start_bank_size = 3
         card_name = u'Вокзал'
 
-        player = player_class.Player(start_bank_size)
+        player = Player(start_bank_size)
 
         # атрибуты карты (будут храниться в бд и извлекаться из нее)
         card_props = {
             'name': card_name,
             'price': 2,
-            'desc': u'Вы можете бросить 1 или 2 кубика.',
-            'effect_cost': (0, 0),
+            'description': u'Вы можете бросить 1 или 2 кубика.',
+            'effect_cost': '0-0',
             'effect_name': 'railway_station'
         }
 
         bank_after_one_building = start_bank_size - card_props['price']
-        sight_card = card_sight_class.SightCard(card_props, player.id)
+        sight_card = SightCard(card_props, player.id)
         player.sight_card_hand[card_name] = sight_card
         player.build_sight(card_name)
 
@@ -58,7 +58,7 @@ class BuildEnterpriseTestCase(unittest.TestCase):
         card_in_heap_amount = 2
         built_enterprise_counter = 0
 
-        player = player_class.Player(start_bank_size)
+        player = Player(start_bank_size)
 
         # колода карт резерва
         card_heap = {card_name: card_in_heap_amount}
@@ -70,8 +70,8 @@ class BuildEnterpriseTestCase(unittest.TestCase):
             'profit_margin': 1,
             'branch_type': 'food',
             'price': 1,
-            'desc': u'Возьмите 1 монету из банка. В ход любого игрока.',
-            'effect_cost': (1, 1)
+            'description': u'Возьмите 1 монету из банка. В ход любого игрока.',
+            'effect_cost': '1-1'
         }
 
         for _ in range(card_in_heap_amount + 2):

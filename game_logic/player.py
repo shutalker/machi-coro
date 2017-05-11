@@ -1,5 +1,5 @@
 from uuid import uuid4
-from card_enterprise_class import EnterpriseCard
+from card.enterprise_card import EnterpriseCard
 
 
 class Player:
@@ -22,6 +22,7 @@ class Player:
         '''
 
         self.id = uuid4()
+        self.name = 'Player_' + str(self.id)
         self.bank = start_bank_size
 
         # при создании инстанса создается пустой словарь карт предприятий
@@ -126,7 +127,12 @@ class Player:
         '''
 
         enterprise_card_list = list(self.enterprise_card_hand.values())
+        profit_margin = 0
 
         for card in enterprise_card_list:
             if card.effect_cost[0] <= dice_score <= card.effect_cost[1]:
-                self.bank += card.card_effect(player_dict)
+                profit_margin += card.card_effect(player_dict)
+
+        self.bank += profit_margin
+
+        return profit_margin
