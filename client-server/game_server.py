@@ -45,6 +45,14 @@ class GameServerFactory(WebSocketServerFactory):
         # не знаю)
         self.game_threads = dict()
 
+        # запросы от клиентов, которые не влияют на игровую логику и
+        # обрабатываются сразу
+        self.outter_requests = [
+            'card_info_request',
+            'all_cards_request',
+            'player_bank_request'
+        ]
+
         self.get_cards_from_db()
 
     def get_cards_from_db(self):
@@ -161,6 +169,20 @@ class GameServerFactory(WebSocketServerFactory):
 
     def process_message(self, player, payload, isBinary):
 
+        '''
+            Обработка входящих запросов (ответов)
+        '''
+
+        request = payload.decode('utf-8').split(sep=':')
+
+        # обработка запросов, не относящихся к игровой логике
+        if request[0] in self.outter_requests:
+            command =  'outter_' + request[0]
+            request_handler = getattr(self, command)
+            request_handler(player, *request)
+
+            return
+
         for game_id in self.games:
             game = self.games[game_id]
             print('Trying game ' + str(game_id))
@@ -169,6 +191,39 @@ class GameServerFactory(WebSocketServerFactory):
                 game.request_handler.recv_msg(player.peer, payload, isBinary)
                 break
 
+    def outter_card_info_request(self, player, *args):
+
+        '''
+            Отсылка клиенту информации об указанной им карте
+        '''
+
+        card_name = args[1]
+        response = 'info:'
+
+        if card_name in self.cards_properties:
+            card = self.cards_properties[card_name]
+            response += 'Карта: ' + card['name'] + '\r\n'
+            response += 'Cтоимость: ' + str(card['price']) + '\r\n'
+            response += 'Описание: ' + card['description'] + '\r\n'
+            response += 'Стоимость эффекта (диапазон): ' + \
+                        card['effect_cost']
+        else:
+            response += 'Имя карты указано неверно!'
+
+        player.sendMessage(response.encode('utf-8'), True)
+
+    def outter_all_cards_request(self, player, *args):
+
+        '''
+            Остылка клиенту названий всех карт игры
+        '''
+
+        response = 'info:'
+
+        for card_name in self.cards_properties:
+            response += card_name + '\r\n'
+
+        player.sendMessage(response.encode('utf-8'), True)
 
 
 if __name__ == '__main__':

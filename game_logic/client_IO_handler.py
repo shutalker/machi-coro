@@ -9,8 +9,13 @@ class GameClientIO(basic.LineReceiver):
 
         super(GameClientIO, self).__init__(*args, **kwargs)
 
-        self.gameProtocol = None
+        # инстанс протокола для связи клиента с сервером
+        self.game_protocol = None
+
+        # флаг отключения от игры
         self.quit_flag = False
+
+        # параметры запроса от сервера
         self.request_from_server = False
         self.request_type = ''
         self.request_desc = ''
@@ -36,7 +41,7 @@ class GameClientIO(basic.LineReceiver):
             response = request_handler(line, self.request_arg)
             if response != None:
                 self.reset_request_processing_mode()
-                self.gameProtocol.sendMessage(response.encode('utf-8'))
+                self.game_protocol.sendMessage(response.encode('utf-8'))
                 self.print_message('')
 
                 return
@@ -95,10 +100,18 @@ class GameClientIO(basic.LineReceiver):
 
         self.sendLine('Тут когда-нибудь будут правила...'.encode('utf-8'))
 
-    def do_card(self, card_name):
+    def do_card(self, *args):
 
         '''card [name]: список с названиями всех карт игры или описание
                         конкретной карты (если указано имя карты)'''
+
+        if args:
+            card_name = args[0]
+            request = 'card_info_request:' + card_name
+            self.game_protocol.sendMessage(request.encode('utf-8'))
+        else:
+            request = 'all_cards_request'
+            self.game_protocol.sendMessage(request.encode('utf-8'))
 
     def do_quit(self):
 
@@ -106,7 +119,7 @@ class GameClientIO(basic.LineReceiver):
 
         self.quit_flag = True
         self.stopProducing()
-        self.gameProtocol.sendClose()
+        self.game_protocol.sendClose()
 
     def print_message(self, message):
 

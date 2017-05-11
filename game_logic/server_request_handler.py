@@ -1,3 +1,7 @@
+from random import randint
+from twisted.internet import defer
+
+
 class ServerRequestHandler:
 
     '''
@@ -15,6 +19,19 @@ class ServerRequestHandler:
 
         # внутреигровой буфер сообщений
         self.message_buffer = ''
+
+        # флаг отключения игрока во время ожидания ответа
+        self.player_disconnected = False
+
+        # время ожидания ответа клиента
+        self.timeout = 60
+
+    # def set_timer(self):
+    #     deferred = defer.Deferred()
+    #     deferred.addCallback(lambda: self.player_disconnected = True)
+    #     reactor.callLater(self.timeout, deferred.callback, True)
+
+    #     return deferred
 
     def recv_msg(self, player_peer, payload, is_binary):
 
@@ -71,7 +88,10 @@ class ServerRequestHandler:
 
         while not self.message_recieved_flag:
 
-            pass
+            if self.player_disconnected:
+                self.player_disconnected = False
+
+                return 'DISCONNECTED'
 
         # когда сообщение пришло, флаг сбрасывается,
         # чтобы обрабатывать следующие сообщения
@@ -90,6 +110,9 @@ class ServerRequestHandler:
 
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
+        if response == 'DISCONNECTED':
+
+            return response
 
         if len(response) < 1:
             response = None
@@ -120,6 +143,9 @@ class ServerRequestHandler:
 
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
+        if response == 'DISCONNECTED':
+
+            return response
 
         return int(response)
 
@@ -131,6 +157,9 @@ class ServerRequestHandler:
 
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
+        if response == 'DISCONNECTED':
+
+            return response
 
         dice_idx, result = None, None
 
@@ -142,6 +171,11 @@ class ServerRequestHandler:
                 player_protocol.sendMessage(request.encode(encoding='utf-8'),
                                             True)
                 response = self.wait_for_message()
+
+                if response == 'DISCONNECTED':
+
+                    return response, None
+
                 dice_idx = int(response) - 1
             else:
                 dice_idx = 0
@@ -159,6 +193,9 @@ class ServerRequestHandler:
 
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
+        if response == 'DISCONNECTED':
+
+            return response
 
         increase_value = 0
 
@@ -205,6 +242,9 @@ class ServerRequestHandler:
         request += '+Отказаться от строительства'
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
+        if response == 'DISCONNECTED':
+
+            return response
 
         return choises[int(response)]
 
@@ -242,5 +282,8 @@ class ServerRequestHandler:
         request = request + ':' + request_arg
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
+        if response == 'DISCONNECTED':
+
+            return response
 
         return choises[int(response)]

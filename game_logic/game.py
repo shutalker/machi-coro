@@ -1,5 +1,6 @@
 from uuid import uuid4
 from random import randint
+from time import sleep
 from game_logic.player import Player
 from game_logic.server_request_handler import ServerRequestHandler
 from card.enterprise_card import EnterpriseCard
@@ -20,7 +21,6 @@ class Game:
         self.card_properties = card_props
         self.start_bank_size = start_bank_size
         self.end_game_flag = False
-        self.active_player_disconnected = False
 
         # инстанс обработчика запросов клиентам от сервера
         self.request_handler = ServerRequestHandler()
@@ -53,7 +53,7 @@ class Game:
         '''
         player_id = self.request_handler.peers[player_peer]['player_id']
         if self.players[player_id].is_active:
-            self.active_player_disconnected = True
+            self.request_handler.player_disconnected = True
         player_name = self.players[player_id].name
         self.players.pop(player_id)
         self.request_handler.peers.pop(player_peer)
@@ -104,6 +104,9 @@ class Game:
             request = 'dice_amount_request'
             dice_amount = self.request_handler.send_request(active_player.id,
                                                             request)
+            if dice_amount == 'DISCONNECTED':
+
+                return dice_amount
         else:
             dice_amount = 1
 
@@ -118,6 +121,10 @@ class Game:
             request = 'reroll_dice_request:' + str(dice_amount)
             dice_idx, result = self.request_handler.send_request(active_player.id,
                                                                  request)
+            if dice_idx == 'DISCONNECTED':
+
+                return dice_idx
+
             if dice_idx != None:
                 dice_scores[dice_idx] = result
 
@@ -131,6 +138,11 @@ class Game:
             request = 'increase_dice_score_request'
             increase_value = self.request_handler.send_request(active_player.id,
                                                                request)
+
+            if increase_value == 'DISCONNECTED':
+
+                return increase_value
+
             sum_dice_score += increase_value
 
         return sum_dice_score
@@ -222,6 +234,9 @@ class Game:
         while build_status != 'build_successful':
             request = 'build_request'
             response = self.request_handler.send_request(player.id, request)
+            if response == 'DISCONNECTED':
+
+                return response
 
             if response == 'build_denied':
                 if player.sight_card_hand['Аэропорт'].is_built:
@@ -255,6 +270,9 @@ class Game:
                 # сюда вернется либо название карты, либо back_to_type_choise
                 build_status = self.request_handler.send_request(player.id,
                                                                  request)
+                if build_status == 'DISCONNECTED':
+
+                    return response
 
                 if build_status != 'back_to_type_choise':
                     if response == 'build_enterprise':
@@ -281,6 +299,7 @@ class Game:
         self.request_handler.broadcast(request)
 
         while not self.end_game_flag:
+            sleep(0.1)
             # это делается на каждом ходу, поскольку игроки в процессе игры
             # могут отключаться от серверва, что приводит к корректировке
             # словарей и очередности хода
@@ -309,17 +328,26 @@ class Game:
 
             dice_score = self.roll_dice(active_player)
 
+            if dice_score == 'DISCONNECTED':
+                continue
+
             # отправка результата броска кубика всем игрокам
             request = 'Игрок ' + str(active_player.name) + ' выбрасывает ' + \
                   str(dice_score) + ' очков!'
             self.request_handler.broadcast(request)
 
             # фаза доходов
-            self.profit_phase(turn_queue, current_active_player_idx,
-                              dice_score)
+            status = self.profit_phase(turn_queue, current_active_player_idx,
+                                       dice_score)
+
+            if status == 'DISCONNECTED':
+                continue
 
             # фаза строительства
-            self.building_phase(active_player)
+            status = self.building_phase(active_player)
+
+            if status == 'DISCONNECTED':
+                continue
 
             active_player.is_active = False
             sights_to_build = len(active_player.sight_card_hand)

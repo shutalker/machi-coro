@@ -47,10 +47,11 @@ class GameClientFactory(WebSocketClientFactory):
         print('\t\t"rules" - правила игры')
         print('\t\t"card [name]" - список всех карт/информация о карте')
         print('\t\t"hand" - список карт на руках')
+        print('\t\t"bank" - текущий размер Вашего банка')
         print('\t\t"quit" - выход из игры')
         print('-------------------------------------------------------------')
 
-        self.clientIO.gameProtocol = protocol
+        self.clientIO.game_protocol = protocol
         stdio.StandardIO(self.clientIO)
 
     def connection_close(self, protocol):
@@ -69,7 +70,8 @@ class GameClientFactory(WebSocketClientFactory):
         parsed_message = message.split(sep=':', maxsplit=1)
         message_type = parsed_message[0]
 
-        if message_type == 'bcast':
+        # сообщения широковещатльной рассылки игрокам
+        if message_type == 'bcast' or message_type == 'info':
             self.clientIO.print_message(parsed_message[1])
 
             return
