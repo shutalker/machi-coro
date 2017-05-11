@@ -15,6 +15,7 @@ class GameClientIO(basic.LineReceiver):
         self.request_type = ''
         self.request_desc = ''
         self.request_arg = None
+        self.request_process_error = ''
 
     def connectionMade(self):
         self.transport.write('>>> '.encode('utf-8'))
@@ -23,10 +24,7 @@ class GameClientIO(basic.LineReceiver):
         line = line.decode('utf-8').strip()
 
         if not line:
-            if self.request_from_server:
-                self.transport.write('==> '.encode('utf-8'))
-            else:
-                self.transport.write('>>> '.encode('utf-8'))
+            self.transport.write('>>> '.encode('utf-8'))
 
             return
 
@@ -36,23 +34,12 @@ class GameClientIO(basic.LineReceiver):
             request_handler = getattr(self, request_name)
 
             response = request_handler(line, self.request_arg)
-            if response == None:
+            if response != None:
+                self.reset_request_processing_mode()
+                self.gameProtocol.sendMessage(response.encode('utf-8'))
+                self.print_message('')
 
                 return
-
-            self.request_from_server = False
-            self.request_type = ''
-            self.request_desc = ''
-            self.request_arg = None
-
-            # если ответ требуется отослать на сервер, то respone не является
-            # пустой строкой
-            if response != '':
-                self.gameProtocol.sendMessage(response.encode('utf-8'))
-
-            self.print_message('')
-
-            return
 
         # парсинг команды от клиента
         command_parts = line.strip().split()
@@ -65,6 +52,11 @@ class GameClientIO(basic.LineReceiver):
             error_message += "(наберите 'help', чтобы узнать список "
             error_message += "доступных команд)"
             self.sendLine(error_message.encode('utf-8'))
+
+            if self.request_process_error:
+                self.sendLine(self.request_process_error.encode('utf-8'))
+                self.sendLine(self.request_desc.encode('utf-8'))
+
             self.transport.write('>>> '.encode('utf-8'))
 
             return
@@ -73,6 +65,13 @@ class GameClientIO(basic.LineReceiver):
 
         if not self.quit_flag:
             self.transport.write('>>> '.encode('utf-8'))
+
+    def reset_request_processing_mode(self):
+        self.request_from_server = False
+        self.request_type = ''
+        self.request_desc = ''
+        self.request_process_error = ''
+        self.request_arg = None
 
     def connectionLost(self, reason):
         print('')
@@ -119,10 +118,7 @@ class GameClientIO(basic.LineReceiver):
         self.transport.write('\r'.encode('utf-8'))
         self.sendLine(message.encode('utf-8'))
 
-        if self.request_from_server:
-            self.transport.write('==> '.encode('utf-8'))
-        else:
-            self.transport.write('>>> '.encode('utf-8'))
+        self.transport.write('>>> '.encode('utf-8'))
 
     def process_server_request(self, *args):
 
@@ -144,6 +140,7 @@ class GameClientIO(basic.LineReceiver):
             'noreply_request' : {
                                     'profit_request' : '',
                                     'bank_loss_request' : '',
+                                    'active_player_request' : 'Вы - активный игрок!',
                                     'no_money_to_build' : 'У Вас недостаточно средств, чтобы строить предприятия данного типа!',
                                     'profit_from_no_build_request' : 'Вы получаете 10 монет за отказ от строительства!'
                                 },
@@ -173,17 +170,15 @@ class GameClientIO(basic.LineReceiver):
 
         if self.request_type == 'list_choise_request':
             choises = self.request_arg.split(sep='+')
-            for choise_idx in range(len(choises) - 1):
+            for choise_idx in range(len(choises)):
                 self.request_desc += '\r\n' + str(choise_idx + 1) + '.' + \
                                      choises[choise_idx]
-            if choises[-1] == 'build_denied':
-                self.request_desc += '\r\n' + str(len(choises)) + '.' + \
-                                     'Отказаться от строительства'
-            elif choises[-1] == 'back_to_type_choise':
-                self.request_desc += '\r\n' + str(len(choises)) + '.' + \
-                                     'Возврат к выбору типа предприятия'
 
         self.print_message(self.request_desc)
+
+        if self.request_type == 'noreply_request' and self.request_arg:
+            self.print_message(self.request_arg)
+            self.reset_request_processing_mode()
 
     def process_12_request(self, choise, arg):
 
@@ -212,9 +207,7 @@ class GameClientIO(basic.LineReceiver):
         correct_response = ['y', 'yes', 'n', 'no']
 
         if not (choise in correct_response):
-            self.print_message('Ошибка выбора: укажите ("y" или "n")')
-            self.print_message(self.request_desc)
-
+            self.request_process_error = 'Ошибка выбора: укажите ("y" или "n")'
             response = None
         else:
             if choise in  correct_response[:2]:
@@ -224,27 +217,21 @@ class GameClientIO(basic.LineReceiver):
 
         return response
 
-    def process_noreply_request(self, choise, arg):
-
-        '''
-            Обработка запросов, не требующих ответа
-        '''
-
-        if arg:
-            self.print_message(arg)
-
-        response = ''
-
     def process_list_choise_request(self, choise, arg):
 
         choises = arg.split(sep='+')
-        choise_idx = int(choise) - 1
 
-        if 0 <= choise_idx <= (len(choises) - 1):
-            response = choises[choise_idx]
-        else:
-            self.print_message('Ошибка выбора: укажите номер строки варианта')
-            self.print_message(self.request_desc)
+        try:
+            choise_idx = int(choise) - 1
+        except ValueError:
+            self.request_process_error = 'Ошибка выбора: вы указали не число'
             response = None
+        else:
+            if 0 <= choise_idx <= (len(choises) - 1):
+                response = str(choise_idx)
+            else:
+                self.request_process_error = 'Ошибка выбора: укажите номер ' +\
+                                             ' строки варианта'
+                response = None
 
         return response

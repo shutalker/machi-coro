@@ -20,6 +20,7 @@ class Game:
         self.card_properties = card_props
         self.start_bank_size = start_bank_size
         self.end_game_flag = False
+        self.active_player_disconnected = False
 
         # инстанс обработчика запросов клиентам от сервера
         self.request_handler = ServerRequestHandler()
@@ -51,6 +52,8 @@ class Game:
             из инстанса класса Game, т.е. больше не участвует в игре
         '''
         player_id = self.request_handler.peers[player_peer]['player_id']
+        if self.players[player_id].is_active:
+            self.active_player_disconnected = True
         player_name = self.players[player_id].name
         self.players.pop(player_id)
         self.request_handler.peers.pop(player_peer)
@@ -145,7 +148,7 @@ class Game:
             enterprise_amount = self.card_heap[enterprise_name]
 
             if enterprise_amount > 0:
-                enterprise_price = self.card_properties[enterprise_name].price
+                enterprise_price = self.card_properties[enterprise_name]['price']
 
                 if player_bank >= enterprise_price:
                     avaliable_enterprises.append(enterprise_name)
@@ -225,7 +228,8 @@ class Game:
                     request = 'profit_from_no_build_request'
                     self.request_handler.send_request(player.id, request)
                     player.bank += 10
-                    build_status = 'build_successful'
+
+                build_status = 'build_successful'
             else:
                 # возвращается 'build_enterprise' или 'build_sight'
                 request = 'build_choise_request:'
@@ -242,12 +246,11 @@ class Game:
                 # запрос типа 'text+text+...+text+' будет парситься на стороне
                 # клиента, причем последний символ '+' в строке нужен не просто
                 # так: при вызове функции split в список последним элементом
-                # запишется строка 'back_to_type_choise'. Она будет означать
-                # выбор игрока: вернуться к выбору типа постройки
+                # запишется строка 'Возврат к выбору типа предприятий'
                 for building in avaliable_buildings:
                     request += building + '+'
 
-                request += 'back_to_type_choise'
+                request += 'Возврат к выбору типа предприятий'
 
                 # сюда вернется либо название карты, либо back_to_type_choise
                 build_status = self.request_handler.send_request(player.id,
@@ -261,7 +264,7 @@ class Game:
                         sight = build_status
                         player.build_sight(sight)
 
-                    build_sight = 'build_successful'
+                    build_status = 'build_successful'
 
     def start(self):
 
@@ -301,6 +304,9 @@ class Game:
             request = 'Активный игрок: ' + str(active_player.name)
             self.request_handler.broadcast(request)
 
+            request = 'active_player_request'
+            self.request_handler.send_request(active_player.id, request)
+
             dice_score = self.roll_dice(active_player)
 
             # отправка результата броска кубика всем игрокам
@@ -320,6 +326,7 @@ class Game:
 
             if active_player.built_sight_amount == sights_to_build:
                 request = 'ПОБЕДИТЕЛЬ - ' + active_player.name + '!'
+                self.request_handler.broadcast(request)
                 self.request_handler.close_all_connections()
                 break
 

@@ -104,6 +104,14 @@ class ServerRequestHandler:
 
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
 
+    def active_player_request(self, player_protocol, request, request_arg):
+
+        '''
+            Оповещение игрока о том, что он является активным
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+
     def dice_amount_request(self, player_protocol, request, request_arg):
 
         '''
@@ -127,7 +135,7 @@ class ServerRequestHandler:
         dice_idx, result = None, None
 
         if response == 'accept':
-            dice_amount = request_arg
+            dice_amount = int(request_arg)
 
             if dice_amount > 1:
                 request = 'dice_idx_to_reroll_request'
@@ -165,7 +173,7 @@ class ServerRequestHandler:
             Функция отсылки дохода игрока на данном ходу
         '''
 
-        profit_info = 'Ваш доход на этом ходу: '
+        profit_info = 'Ваш доход на этом ходу '
         profit_info += request_arg
         profit_info += ' монет(а/ы)'
 
@@ -178,7 +186,7 @@ class ServerRequestHandler:
             Функция отсылки расхода игрока на данном ходу
         '''
 
-        loss_info = 'Ваши убытки на этом ходу: '
+        loss_info = 'Ваши убытки на этом ходу '
         loss_info += request_arg
         loss_info += ' монет(а/ы)'
 
@@ -191,11 +199,14 @@ class ServerRequestHandler:
             Функция запроса строительства предприятий (строить или нет?)
         '''
 
-        request = request + ':Предприятие+Достопримечательность+build_denied'
+        choises = ['build_enterprise', 'build_sight', 'build_denied']
+
+        request = request + ':Предприятие+Достопримечательность'
+        request += '+Отказаться от строительства'
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
 
-        return response
+        return choises[int(response)]
 
     def profit_from_no_build_request(self, player_protocol, request,
                                      request_arg):
@@ -220,13 +231,16 @@ class ServerRequestHandler:
         # build_phase (класс Game), будет содержать только back_to_type_choise,
         # в соостветствии с чем игроку будет отправлено сообщение о том, что у
         # него недостаточно средств для строительства
-        if request_arg == 'back_to_type_choise':
+        if request_arg == 'Возврат к выбору типа предприятий':
             request = 'no_money_to_build'
             player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
-            return request_arg
+            return 'back_to_type_choise'
+
+        choises = request_arg.split(sep='+')
+        choises[-1] = 'back_to_type_choise'
 
         request = request + ':' + request_arg
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
         response = self.wait_for_message()
 
-        return response
+        return choises[int(response)]

@@ -36,19 +36,3 @@ class BaseCard:
             effect_cost[idx] = int(elem)
 
         self.effect_cost = tuple(effect_cost)
-
-    def __bytes__(self):
-
-        '''
-            Перегрузка метода для вызова bytes(card_instance). Байтовая строка
-            будет передаваться по сети от сервера клиенту с целью
-            предоставления ему информации о картах
-        '''
-
-        separator = ':'
-        card_info = self.name + separator
-        card_info += self.description + separator
-        card_info += str(self.price) + separator
-        card_info += str(self.effect_cost[0]) + '-' + str(self.effect_cost[1])
-
-        return bytes(card_info, encoding='utf-8')

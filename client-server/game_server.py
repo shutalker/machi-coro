@@ -112,7 +112,7 @@ class GameServerFactory(WebSocketServerFactory):
     def add_to_game(self, player):
 
         if self.current_lobby_size == 0:
-            new_game = Game(self.card_heap, self.cards_properties)
+            new_game = Game(self.card_heap, self.cards_properties, 100)
             self.last_created_game_id = new_game.id
             self.games[self.last_created_game_id] = new_game
             print('Game ' + str(new_game.id) + ' created')
