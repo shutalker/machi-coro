@@ -50,7 +50,8 @@ class GameServerFactory(WebSocketServerFactory):
         self.outter_requests = [
             'card_info_request',
             'all_cards_request',
-            'player_bank_request'
+            'player_bank_request',
+            'player_hand_request'
         ]
 
         self.get_cards_from_db()
@@ -148,6 +149,7 @@ class GameServerFactory(WebSocketServerFactory):
                     self.current_lobby_size -= 1
                     if self.current_lobby_size < 1:
                         self.games.pop(game.id)
+                        print('Game ' + str(game.id) + ' has been destroyed')
 
                     break
 
@@ -156,13 +158,13 @@ class GameServerFactory(WebSocketServerFactory):
                     if len(game.players) < 2:
                         last_player_id = game.players.popitem()[0]
                         request = 'close_connection_request'
+                        game.stop()
                         game.request_handler.send_request(last_player_id,
                                                           request)
-                        game.stop()
                         self.game_threads[game.id].join()
                         self.game_threads.pop(game.id)
 
-                        print("Game " + str(game.id) + " has been finished")
+                        print('Game ' + str(game.id) + ' has been finished')
                         self.games.pop(game.id)
 
                     break
@@ -191,7 +193,7 @@ class GameServerFactory(WebSocketServerFactory):
                 game.request_handler.recv_msg(player.peer, payload, isBinary)
                 break
 
-    def outter_card_info_request(self, player, *args):
+    def outter_card_info_request(self, player_protocol, *args):
 
         '''
             Отсылка клиенту информации об указанной им карте
@@ -210,9 +212,9 @@ class GameServerFactory(WebSocketServerFactory):
         else:
             response += 'Имя карты указано неверно!'
 
-        player.sendMessage(response.encode('utf-8'), True)
+        player_protocol.sendMessage(response.encode('utf-8'), True)
 
-    def outter_all_cards_request(self, player, *args):
+    def outter_all_cards_request(self, player_protocol, *args):
 
         '''
             Остылка клиенту названий всех карт игры
@@ -223,8 +225,55 @@ class GameServerFactory(WebSocketServerFactory):
         for card_name in self.cards_properties:
             response += card_name + '\r\n'
 
-        player.sendMessage(response.encode('utf-8'), True)
+        player_protocol.sendMessage(response.encode('utf-8'), True)
 
+    def outter_player_bank_request(self, player_protocol, *args):
+
+        '''
+            Отсылка текущего банка запрашивающему игроку
+        '''
+
+        response = 'info:'
+
+        for game_id in self.games:
+            game = self.games[game_id]
+
+            if player_protocol.peer in game.request_handler.peers:
+                peer = game.request_handler.peers[player_protocol.peer]
+                player_id = peer['player_id']
+                player_bank = game.players[player_id].bank
+
+                response += 'Ваш текущий банк: ' + str(player_bank)
+                response += ' монет(а/ы)'
+                player_protocol.sendMessage(response.encode('utf-8'), True)
+
+    def outter_player_hand_request(self, player_protocol, *args):
+
+        '''
+            Отсылка карт, имеющихся на руках у игрока
+        '''
+
+        response = 'info:'
+
+        for game_id in self.games:
+            game = self.games[game_id]
+
+            if player_protocol.peer in game.request_handler.peers:
+                peer = game.request_handler.peers[player_protocol.peer]
+                player_id = peer['player_id']
+                player = game.players[player_id]
+
+                response += 'Предприятия:' + '\r\n'
+                for card_name in player.enterprise_card_hand:
+                    card = player.enterprise_card_hand[card_name]
+                    card_amount = card.hand_card_amount
+                    response += card_name + ' x ' + str(card_amount) + '\r\n'
+
+                response += '\r\n' + 'Достопримечательности:' + '\r\n'
+                for card_name in player.sight_card_hand:
+                    response += card_name + '\r\n'
+
+                player_protocol.sendMessage(response.encode('utf-8'), True)
 
 if __name__ == '__main__':
 

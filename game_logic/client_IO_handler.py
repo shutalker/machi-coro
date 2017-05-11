@@ -113,6 +113,20 @@ class GameClientIO(basic.LineReceiver):
             request = 'all_cards_request'
             self.game_protocol.sendMessage(request.encode('utf-8'))
 
+    def do_bank(self):
+
+        '''bank: отображает значение Вашего текущего банка'''
+
+        request = 'player_bank_request'
+        self.game_protocol.sendMessage(request.encode('utf-8'))
+
+    def do_hand(self):
+
+        '''hand: показывает все карты, имеющиеся у Вас на руках'''
+
+        request = 'player_hand_request'
+        self.game_protocol.sendMessage(request.encode('utf-8'))
+
     def do_quit(self):
 
         '''quit: выход из игры'''
@@ -187,7 +201,8 @@ class GameClientIO(basic.LineReceiver):
                 self.request_desc += '\r\n' + str(choise_idx + 1) + '.' + \
                                      choises[choise_idx]
 
-        self.print_message(self.request_desc)
+        if self.request_desc:
+            self.print_message(self.request_desc)
 
         if self.request_type == 'noreply_request' and self.request_arg:
             self.print_message(self.request_arg)

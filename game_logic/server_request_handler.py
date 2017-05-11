@@ -1,5 +1,5 @@
 from random import randint
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 
 
 class ServerRequestHandler:
@@ -23,15 +23,21 @@ class ServerRequestHandler:
         # флаг отключения игрока во время ожидания ответа
         self.player_disconnected = False
 
-        # время ожидания ответа клиента
+        # время ожидания ответа клиента (в секундах)
         self.timeout = 60
 
-    # def set_timer(self):
-    #     deferred = defer.Deferred()
-    #     deferred.addCallback(lambda: self.player_disconnected = True)
-    #     reactor.callLater(self.timeout, deferred.callback, True)
+    def set_disconnect_timer(self):
+        deferred = defer.Deferred()
+        deferred.addErrback(self.reset_disconnect_flag)
+        reactor.callLater(self.timeout, self.set_disconnect_flag, True)
 
-    #     return deferred
+        return deferred
+
+    def set_disconnect_flag(self, flag):
+        self.player_disconnected = flag
+
+    def reset_disconnect_flag(self, errback):
+        self.player_disconnected = False
 
     def recv_msg(self, player_peer, payload, is_binary):
 
@@ -86,13 +92,16 @@ class ServerRequestHandler:
 
     def wait_for_message(self):
 
+        deferred = self.set_disconnect_timer()
+
         while not self.message_recieved_flag:
 
             if self.player_disconnected:
-                self.player_disconnected = False
+                deferred.cancel()
 
                 return 'DISCONNECTED'
 
+        deferred.cancel()
         # когда сообщение пришло, флаг сбрасывается,
         # чтобы обрабатывать следующие сообщения
         self.message_recieved_flag = False

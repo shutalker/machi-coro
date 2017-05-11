@@ -60,6 +60,12 @@ class Game:
         request = 'Игрок ' + player_name + ' покинул игру'
         self.request_handler.broadcast(request)
 
+    def detect_disconnect_reason(self, player):
+        if player.id in self.players:
+            player.is_active = False
+            request = 'Игрок ' + player.name + ' пропускает ход!'
+            self.request_handler.broadcast(request)
+
     def init_players_hands(self):
 
         '''
@@ -329,6 +335,7 @@ class Game:
             dice_score = self.roll_dice(active_player)
 
             if dice_score == 'DISCONNECTED':
+                self.detect_disconnect_reason(active_player)
                 continue
 
             # отправка результата броска кубика всем игрокам
@@ -341,12 +348,14 @@ class Game:
                                        dice_score)
 
             if status == 'DISCONNECTED':
+                self.detect_disconnect_reason(active_player)
                 continue
 
             # фаза строительства
             status = self.building_phase(active_player)
 
             if status == 'DISCONNECTED':
+                self.detect_disconnect_reason(active_player)
                 continue
 
             active_player.is_active = False
@@ -362,3 +371,4 @@ class Game:
     def stop(self):
 
         self.end_game_flag = True
+        self.request_handler.player_disconnected = True
