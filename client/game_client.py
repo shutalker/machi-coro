@@ -1,7 +1,7 @@
 from autobahn.twisted.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
 from twisted.internet import stdio
-from game_logic.client_IO_handler import GameClientIO
+from client_IO_handler import GameClientIO
 
 
 class GameClientProtocol(WebSocketClientProtocol):

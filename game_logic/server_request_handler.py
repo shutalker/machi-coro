@@ -24,7 +24,7 @@ class ServerRequestHandler:
         self.player_disconnected = False
 
         # время ожидания ответа клиента (в секундах)
-        self.timeout = 60
+        self.timeout = 20
 
     def set_disconnect_timer(self):
         deferred = defer.Deferred()
