@@ -24,20 +24,11 @@ class ServerRequestHandler:
         self.player_disconnected = False
 
         # время ожидания ответа клиента (в секундах)
-        self.timeout = 20
+        self.timeout = 60
 
     def set_disconnect_timer(self):
-        deferred = defer.Deferred()
-        deferred.addErrback(self.reset_disconnect_flag)
-        reactor.callLater(self.timeout, self.set_disconnect_flag, True)
 
-        return deferred
-
-    def set_disconnect_flag(self, flag):
-        self.player_disconnected = flag
-
-    def reset_disconnect_flag(self, errback):
-        self.player_disconnected = False
+        return reactor.callLater(self.timeout, self.set_disconnect_flag, True)
 
     def recv_msg(self, player_peer, payload, is_binary):
 
@@ -97,11 +88,13 @@ class ServerRequestHandler:
         while not self.message_recieved_flag:
 
             if self.player_disconnected:
-                deferred.cancel()
+                self.player_disconnected = False
+                self.message_recieved_flag = False
 
                 return 'DISCONNECTED'
 
         deferred.cancel()
+
         # когда сообщение пришло, флаг сбрасывается,
         # чтобы обрабатывать следующие сообщения
         self.message_recieved_flag = False
