@@ -7,7 +7,7 @@ fi
 
 requires="python3 python3-pip sed"
 if [ "$1" = "server" ] ; then
-    requires="$requires mariadb-server"
+    requires="$requires mysql-server"
 elif [ "$1" != "client" ] ; then
     echo "Unknown argument: $1"
     exit 2
