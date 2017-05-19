@@ -134,8 +134,9 @@ class Game:
             if dice_idx != None:
                 dice_scores[dice_idx] = result
 
+        sum_dice_score = 0
         for score in dice_scores:
-            sum_dice_score = score
+            sum_dice_score += score
 
         # если у игрока построена достопримечательность "Порт",
         # то игра запрашивает у него увеличение выброшенных очков на 2,
@@ -150,6 +151,9 @@ class Game:
                 return increase_value
 
             sum_dice_score += increase_value
+
+        request = 'active_player_dice_score_request:' + str(sum_dice_score)
+        self.request_handler.send_request(active_player.id, request)
 
         return sum_dice_score
 

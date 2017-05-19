@@ -24,11 +24,14 @@ class ServerRequestHandler:
         self.player_disconnected = False
 
         # время ожидания ответа клиента (в секундах)
-        self.timeout = 60
+        self.timeout = 120
 
     def set_disconnect_timer(self):
 
         return reactor.callLater(self.timeout, self.set_disconnect_flag, True)
+
+    def set_disconnect_flag(self, flag):
+        self.player_disconnected = flag
 
     def recv_msg(self, player_peer, payload, is_binary):
 
@@ -94,6 +97,7 @@ class ServerRequestHandler:
                 return 'DISCONNECTED'
 
         deferred.cancel()
+        self.player_disconnected = False
 
         # когда сообщение пришло, флаг сбрасывается,
         # чтобы обрабатывать следующие сообщения
@@ -135,6 +139,15 @@ class ServerRequestHandler:
             Оповещение игрока о том, что он является активным
         '''
 
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+
+    def active_player_dice_score_request(self, player_protocol, request,
+                                         request_arg):
+
+        '''
+            Оповещение игрока о том, чсколько очков он выбросил
+        '''
+        request = request + ":Вы выбросили " + request_arg + " очков(а/о)!"
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
 
     def dice_amount_request(self, player_protocol, request, request_arg):

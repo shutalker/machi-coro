@@ -73,7 +73,8 @@ class GameClientFactory(WebSocketClientFactory):
         # сообщения широковещатльной рассылки игрокам
         if message_type == 'bcast' or message_type == 'info':
             self.clientIO.print_message(parsed_message[1])
-            self.clientIO.print_message(self.clientIO.request_desc)
+            if self.clientIO.request_desc:
+                self.clientIO.print_message(self.clientIO.request_desc)
 
             return
 

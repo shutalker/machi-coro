@@ -94,7 +94,7 @@ class GameClientIO(basic.LineReceiver):
             valid_commands = 'Доступные команды: ' + ' '.join(commands)
             self.sendLine(valid_commands.encode('utf-8'))
 
-    def do_rules(self):
+    def do_rules(self, *args):
 
         '''rules: правила игры'''
 
@@ -113,21 +113,21 @@ class GameClientIO(basic.LineReceiver):
             request = 'all_cards_request'
             self.game_protocol.sendMessage(request.encode('utf-8'))
 
-    def do_bank(self):
+    def do_bank(self, *args):
 
         '''bank: отображает значение Вашего текущего банка'''
 
         request = 'player_bank_request'
         self.game_protocol.sendMessage(request.encode('utf-8'))
 
-    def do_hand(self):
+    def do_hand(self, *args):
 
         '''hand: показывает все карты, имеющиеся у Вас на руках'''
 
         request = 'player_hand_request'
         self.game_protocol.sendMessage(request.encode('utf-8'))
 
-    def do_quit(self):
+    def do_quit(self, *args):
 
         '''quit: выход из игры'''
 
@@ -168,6 +168,7 @@ class GameClientIO(basic.LineReceiver):
                                     'profit_request' : '',
                                     'bank_loss_request' : '',
                                     'active_player_request' : 'Вы - активный игрок!',
+                                    'active_player_dice_score_request' : '',
                                     'no_money_to_build' : 'У Вас недостаточно средств, чтобы строить предприятия данного типа!',
                                     'profit_from_no_build_request' : 'Вы получаете 10 монет за отказ от строительства!'
                                 },

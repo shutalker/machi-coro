@@ -3,6 +3,7 @@ from autobahn.twisted.websocket import WebSocketServerProtocol, \
 from game_logic.game import Game
 from threading import Thread
 import MySQLdb
+import os.path
 
 
 class GameServerProtocol(WebSocketServerProtocol):
@@ -65,8 +66,9 @@ class GameServerFactory(WebSocketServerFactory):
         '''
 
         try:
+            conf_file = os.path.abspath(os.path.dirname(__file__)) + "/.mylogin.cnf"
             db = MySQLdb.connect(host="localhost", db="machi_coro",
-                                 read_default_file="./.my.cnf")
+                                 read_default_file=conf_file)
 
             # курсор для данных о картах предприятий
             cursor_enterprise = db.cursor()
@@ -187,9 +189,7 @@ class GameServerFactory(WebSocketServerFactory):
 
         for game_id in self.games:
             game = self.games[game_id]
-            print('Trying game ' + str(game_id))
             if player.peer in game.request_handler.peers:
-                print('Message for ' + str(game.id))
                 game.request_handler.recv_msg(player.peer, payload, isBinary)
                 break
 
@@ -279,9 +279,9 @@ if __name__ == '__main__':
 
     import sys
     from twisted.internet import reactor
-    from twisted.python import log
+    from twisted.python import log, logfile
 
-    log.startLogging(sys.stdout)
+    log.startLogging(logfile.DailyLogFile.fromFullPath("/var/log/machicoro.log"))
 
     factory = GameServerFactory(u"ws://0.0.0.0:9000")
     factory.protocol = GameServerProtocol
