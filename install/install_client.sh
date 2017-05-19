@@ -1,16 +1,17 @@
 #!/bin/bash
 
 echo "Solving dependencies for python3..."
-pip3 install -r "client_requirements.txt"
+pip3 install -r "requirements/client_requirements.txt"
 
 if [  "$?" -eq 0 ] ; then
     echo "OK"
 else
     echo "FAILED"
-    exit 1
+    exit 2
 fi
 
 install_dir="${HOME}/machi-coro-client"
+alias_str='alias mc_startgame='"'""python3 ${install_dir}/game_client.py""'"
 
 if [ -d $install_dir ] ; then
     echo "Directory $install_dir is already exists!"
@@ -41,6 +42,8 @@ if [ -d $install_dir ] ; then
         install_dir="${HOME}/machi-coro-client_reinstalled"
     fi
 
+    sed -i "s#${alias_str}##g" "${HOME}/.bashrc"
+
     unset response
     unset correct_response_flag
 fi
@@ -53,7 +56,6 @@ cp -v "../client/game_client.py" "$install_dir"
 cp -v "../client/client_IO_handler.py" "$install_dir"
 cp -v "uninstall_client/uninstall.sh" "$install_dir"
 
-alias_str='alias mc_startgame='"'""python3 ${install_dir}/game_client.py""'"
 echo $alias_str >> "${HOME}/.bashrc"
 echo $alias_str | sh -s
 . "${HOME}/.bashrc"

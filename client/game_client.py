@@ -89,9 +89,33 @@ class GameClientFactory(WebSocketClientFactory):
 if __name__ == '__main__':
 
     from twisted.internet import reactor
+    from optparse import OptionParser
+    import sys
 
-    factory = GameClientFactory(u"ws://127.0.0.1:9000")
+    usage = "Usage: " + sys.argv[0] + " -a #server_address -p #server_port"
+    parser = OptionParser(usage)
+    parser.add_option("-a", "--address", dest="server_address",
+                      help="server ipv4 address")
+    parser.add_option("-p", "--port", dest="server_port",
+                      help="port of server app")
+
+    (options, args) = parser.parse_args()
+
+    addr = options.server_address
+
+    if options.server_port:
+        try:
+            port = int(options.server_port)
+        except ValueError:
+            print("Incorrect value of server port: " + options.server_port)
+            sys.exit()
+    else:
+        port = 9000
+
+    url = "ws://127.0.0.1:" + str(port)
+
+    factory = GameClientFactory(url)
     factory.protocol = GameClientProtocol
 
-    reactor.connectTCP("127.0.0.1", 9000, factory)
+    reactor.connectTCP(addr, port, factory)
     reactor.run()

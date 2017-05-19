@@ -18,7 +18,7 @@ do
     status=`dpkg -s $package | grep "Status"`
     if [ -z "$status" ] ; then
         installdir=$(dirname $0)
-        . "${installdir}/setup_$package.sh"
+        . "${installdir}/dependences/setup_$package.sh"
         if [ "$?" -ne 0 ] ; then
             echo "Setup package $package error"
             exit 3
