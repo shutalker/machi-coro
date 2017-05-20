@@ -284,7 +284,7 @@ if __name__ == '__main__':
     from twisted.internet import reactor
     from twisted.python import log, logfile
 
-    log.startLogging(logfile.DailyLogFile.fromFullPath("/home/alexis/machicoro.log"))
+    log.startLogging(logfile.DailyLogFile.fromFullPath("/var/log/machicoro/machicoro.log"))
 
     factory = GameServerFactory(u"ws://0.0.0.0:9000")
     factory.protocol = GameServerProtocol

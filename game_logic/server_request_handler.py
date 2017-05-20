@@ -93,6 +93,7 @@ class ServerRequestHandler:
             if self.player_disconnected:
                 self.player_disconnected = False
                 self.message_recieved_flag = False
+                self.message_buffer = ''
 
                 return 'DISCONNECTED'
 
@@ -124,6 +125,15 @@ class ServerRequestHandler:
             response = None
 
         return response
+
+    def pass_turn_request(self, player_protocol, request, request_arg):
+
+        '''
+            Функция, отсылающая активному игроку сигнал о том,
+            что он пропускает ход
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
 
     def close_connection_request(self, player_protocol, request, request_arg):
 

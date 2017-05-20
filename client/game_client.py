@@ -78,6 +78,12 @@ class GameClientFactory(WebSocketClientFactory):
 
             return
 
+        if message_type == 'pass_turn_request':
+            self.clientIO.reset_request_processing_mode()
+            self.clientIO.print_message('Вы пропускаете ход!')
+
+            return
+
         if message_type == 'close_connection_request':
             self.clientIO.stopProducing()
             protocol.sendClose()

@@ -63,6 +63,8 @@ class Game:
     def detect_disconnect_reason(self, player):
         if player.id in self.players:
             player.is_active = False
+            request = 'pass_turn_request'
+            self.request_handler.send_request(player.id, request)
             request = 'Игрок ' + player.name + ' пропускает ход!'
             self.request_handler.broadcast(request)
 
