@@ -11,7 +11,7 @@
 
     cd ./machi-coro
 
-    sudo apt install machicoroclient_version-release_arch.deb  # здесь надо указать текущую версию пакета
+    sudo apt install ./machicoroclient_version-release_arch.deb  # здесь надо указать текущую версию пакета
 
 #### Запуск клиента:
 
