@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
     WebSocketServerFactory
 from game_logic.game import Game
@@ -66,7 +69,7 @@ class GameServerFactory(WebSocketServerFactory):
         '''
 
         try:
-            conf_file = os.path.abspath(os.path.dirname(__file__)) + "/.mylogin.cnf"
+            conf_file = os.path.abspath(os.path.dirname(__file__)) + "/.mc_mylogin.cnf"
             db = MySQLdb.connect(host="localhost", db="machi_coro",
                                  read_default_file=conf_file)
 
@@ -281,7 +284,7 @@ if __name__ == '__main__':
     from twisted.internet import reactor
     from twisted.python import log, logfile
 
-    log.startLogging(logfile.DailyLogFile.fromFullPath("/var/log/machicoro.log"))
+    log.startLogging(logfile.DailyLogFile.fromFullPath("/home/alexis/machicoro.log"))
 
     factory = GameServerFactory(u"ws://0.0.0.0:9000")
     factory.protocol = GameServerProtocol
