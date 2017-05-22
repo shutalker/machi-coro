@@ -134,7 +134,7 @@ class GameServerFactory(WebSocketServerFactory):
         self.games[self.last_created_game_id].add_player(player)
         self.current_lobby_size += 1
 
-        if self.current_lobby_size >= 2:
+        if self.current_lobby_size >= 3:
             game = self.games[self.last_created_game_id]
             self.game_threads[game.id] = Thread(target=game.start)
             self.game_threads[game.id].start()
@@ -274,7 +274,12 @@ class GameServerFactory(WebSocketServerFactory):
 
                 response += '\r\n' + 'Достопримечательности:' + '\r\n'
                 for card_name in player.sight_card_hand:
-                    response += card_name + '\r\n'
+                    card_build_status = ''
+                    if player.sight_card_hand[card_name].is_built:
+                        card_build_status = 'приобретено'
+                    else:
+                        card_build_status = 'не приобретено'
+                    response += card_name + ': ' + card_build_status + '\r\n'
 
                 player_protocol.sendMessage(response.encode('utf-8'), True)
 

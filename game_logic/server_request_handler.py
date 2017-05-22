@@ -151,6 +151,17 @@ class ServerRequestHandler:
 
         player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
 
+    def active_player_turn_request(self, player_protocol, request,
+                                   request_arg):
+
+        '''
+            Оповещение активноо игрока о том, что сейчас его ход
+            Вообще, подобные информационные оповещения необходимо обрабатывать
+            одним единственным методом
+        '''
+
+        player_protocol.sendMessage(request.encode(encoding='utf-8'), True)
+
     def active_player_dice_score_request(self, player_protocol, request,
                                          request_arg):
 

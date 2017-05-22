@@ -335,6 +335,7 @@ class Game:
             request = 'Активный игрок: ' + str(active_player.name)
             self.request_handler.broadcast(request)
 
+            # послать активному игроку оповещение о том, что он активный
             request = 'active_player_request'
             self.request_handler.send_request(active_player.id, request)
 
@@ -356,6 +357,13 @@ class Game:
             if status == 'DISCONNECTED':
                 self.detect_disconnect_reason(active_player)
                 continue
+
+            # отправить оповещения игрокам об ожидании хода активного игрока
+            request = 'ОЖИДАНИЕ ХОДА АКТИВНОГО ИГРОКА...'
+            self.request_handler.broadcast(request)
+
+            request = 'active_player_turn_request'
+            self.request_handler.send_request(active_player.id, request)
 
             # фаза строительства
             status = self.building_phase(active_player)

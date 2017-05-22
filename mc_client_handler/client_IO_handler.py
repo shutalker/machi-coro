@@ -1,4 +1,5 @@
 from twisted.protocols import basic
+import os.path
 
 
 class GameClientIO(basic.LineReceiver):
@@ -12,6 +13,9 @@ class GameClientIO(basic.LineReceiver):
         # инстанс протокола для связи клиента с сервером
         self.game_protocol = None
 
+        # json-объект, содержащий правила игры
+        self.rules_file = None
+
         # флаг отключения от игры
         self.quit_flag = False
 
@@ -21,6 +25,9 @@ class GameClientIO(basic.LineReceiver):
         self.request_desc = ''
         self.request_arg = None
         self.request_process_error = ''
+
+        self.rules_file = os.path.abspath(os.path.dirname(__file__))
+        self.rules_file += '/mc_rules.txt'
 
     def connectionMade(self):
         self.transport.write('>>> '.encode('utf-8'))
@@ -80,6 +87,7 @@ class GameClientIO(basic.LineReceiver):
 
     def connectionLost(self, reason):
         print('')
+        self.do_quit()
 
     def do_help(self, command=None):
 
@@ -98,7 +106,12 @@ class GameClientIO(basic.LineReceiver):
 
         '''rules: правила игры'''
 
-        self.sendLine('Тут когда-нибудь будут правила...'.encode('utf-8'))
+        with open(self.rules_file) as rules_file:    
+            rules = rules_file.read()
+            self.sendLine(rules.encode('utf-8'))
+
+        if self.request_from_server:
+            self.sendLine(self.request_desc.encode('utf-8'))
 
     def do_card(self, *args):
 
@@ -167,8 +180,9 @@ class GameClientIO(basic.LineReceiver):
             'noreply_request' : {
                                     'profit_request' : '',
                                     'bank_loss_request' : '',
-                                    'active_player_request' : 'Вы - активный игрок!',
                                     'active_player_dice_score_request' : '',
+                                    'active_player_turn_request': 'ВАШ ХОД!',
+                                    'active_player_request' : 'Вы - активный игрок!',
                                     'no_money_to_build' : 'У Вас недостаточно средств, чтобы строить предприятия данного типа!',
                                     'profit_from_no_build_request' : 'Вы получаете 10 монет за отказ от строительства!'
                                 },

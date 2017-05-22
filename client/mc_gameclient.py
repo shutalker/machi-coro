@@ -1,7 +1,10 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 from autobahn.twisted.websocket import WebSocketClientProtocol, \
     WebSocketClientFactory
 from twisted.internet import stdio
-from client_IO_handler import GameClientIO
+from mc_client_handler.client_IO_handler import GameClientIO
 
 
 class GameClientProtocol(WebSocketClientProtocol):
@@ -58,7 +61,8 @@ class GameClientFactory(WebSocketClientFactory):
 
         print('Отключение от игры...')
         self.connection_lose_flag = True
-        reactor.stop()
+        if reactor.running:
+            reactor.stop()
 
     def parse_message(self, protocol, payload, is_binary):
 
