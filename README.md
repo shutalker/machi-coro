@@ -44,9 +44,12 @@
 
     git clone https://github.com/shutalker/machi-coro
 
+
     cd ./machi-coro
 
     pip3 install -r requirements.txt
+
+    export PYTHONPATH=`pwd`
 
     cd ./client
 
